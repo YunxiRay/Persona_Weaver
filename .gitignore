@@ -59,6 +59,9 @@ storage/
 htmlcov/
 .pytest_cache/
 
+# ── Claude ──
+CLAUDE.md
+
 # ── Misc ──
 *.tmp
 *.bak
