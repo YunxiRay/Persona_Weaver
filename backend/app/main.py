@@ -2,6 +2,8 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.config import router as config_router
+from app.api.routes.report import router as report_router
+from app.api.routes.session import router as session_router
 from app.api.ws.chat import chat_websocket
 from app.core.config import settings
 from app.core.logging import setup_logging
@@ -24,6 +26,8 @@ app.add_middleware(
 )
 
 app.include_router(config_router, prefix=settings.API_PREFIX)
+app.include_router(session_router, prefix=settings.API_PREFIX)
+app.include_router(report_router, prefix=settings.API_PREFIX)
 
 
 @app.get(f"{settings.API_PREFIX}/health")

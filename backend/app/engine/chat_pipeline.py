@@ -20,6 +20,23 @@ logger = structlog.get_logger(__name__)
 
 # In-memory session storage (MVP; replaced by Redis/DB in production)
 _sessions: dict[str, "SessionState"] = {}
+_reports: dict[str, dict] = {}
+
+
+async def _generate_report(state: "SessionState") -> dict | None:
+    from app.services.report_generator import ReportGenerator
+
+    try:
+        all_user_msgs = [m["content"] for m in state.history if m["role"] == "user"]
+        generator = ReportGenerator(state.provider)
+        return await generator.generate(
+            engine=state.bayesian,
+            all_messages=all_user_msgs,
+            history=state.history,
+        )
+    except Exception as e:
+        logger.error("report_generation_failed", error=str(e))
+        return None
 
 
 class SessionState:
@@ -135,12 +152,18 @@ async def run_pipeline(
     })
     state.last_ai_question = parsed.doctor_reply
 
-    # Step 8: 返回结果
-    log.info("pipeline_step", step=8, name="return_reply")
+    # Step 8: 检查收敛，自动生成报告
+    log.info("pipeline_step", step=8, name="check_convergence_and_report")
     bayesian_summary = state.bayesian.summary()
     is_converged = state.bayesian.is_converged()
+    report_data = None
     if is_converged:
         state.conductor.set_phase("SYNTHESIS")
+        if not state.session_id in _reports:
+            report_data = await _generate_report(state)
+            if report_data:
+                _reports[state.session_id] = report_data
+                log.info("report_generated", session_id=state.session_id, mbti=report_data.get("mbti_type"))
 
     return {
         "type": "reply",
@@ -153,6 +176,7 @@ async def run_pipeline(
         "phase_changed": phase_changed,
         "mbti_hint": bayesian_summary["mbti"],
         "defense_flags": defense_result["flags"],
+        "report": report_data,
     }
 
 
