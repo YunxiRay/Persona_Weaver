@@ -1,0 +1,59 @@
+[tool.poetry]
+name = "persona-weaver"
+version = "0.1.0"
+description = "Persona Weaver (人格织梦者) — AI-powered personality analysis through narrative dialogue"
+authors = ["Yunxi Rany"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.111.0"
+uvicorn = { extras = ["standard"], version = "^0.30.0" }
+pydantic = "^2.7.0"
+pydantic-settings = "^2.3.0"
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.30" }
+asyncpg = "^0.29.0"
+alembic = "^1.13.0"
+redis = "^5.0.0"
+httpx = "^0.27.0"
+openai = "^1.35.0"
+python-jose = { extras = ["cryptography"], version = "^3.3.0" }
+python-multipart = "^0.0.9"
+structlog = "^24.1.0"
+sentence-transformers = "^3.0.0"
+jieba = "^0.42.1"
+jinja2 = "^3.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
+pytest-asyncio = "^0.23.0"
+httpx = "^0.27.0"
+ruff = "^0.4.0"
+mypy = "^1.10.0"
+pre-commit = "^3.7.0"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "N", "UP", "B", "C4", "SIM"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
