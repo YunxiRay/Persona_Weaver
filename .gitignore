@@ -1,0 +1,64 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+.Python
+poetry.lock
+
+# ── Node ──
+node_modules/
+.next/
+out/
+dist/
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# ── 环境变量 & 密钥 ──
+.env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+*.crt
+credentials.json
+service-account.json
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Docker ──
+docker-compose.override.yml
+
+# ── 数据库 ──
+*.sqlite3
+*.db
+pgdata/
+
+# ── 日志 ──
+*.log
+logs/
+
+# ── 上传文件 ──
+uploads/
+storage/
+
+# ── 测试覆盖率 ──
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ── Misc ──
+*.tmp
+*.bak
