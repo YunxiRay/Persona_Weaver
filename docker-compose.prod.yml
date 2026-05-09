@@ -1,0 +1,94 @@
+version: "3.9"
+
+# Persona Weaver — 生产环境部署
+# 启动: docker compose -f docker-compose.prod.yml up -d
+# 停止: docker compose -f docker-compose.prod.yml down
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pw-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-persona}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      POSTGRES_DB: ${POSTGRES_DB:-persona_weaver}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-persona} -d ${POSTGRES_DB:-persona_weaver}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pw-net
+    # 不暴露端口到宿主机，仅容器间通信
+
+  redis:
+    image: redis:7-alpine
+    container_name: pw-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?err}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pw-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pw-backend
+    restart: unless-stopped
+    environment:
+      - APP_NAME=${APP_NAME:-persona-weaver}
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - API_PREFIX=/api/v1
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-persona}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-persona_weaver}
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER:-persona}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-persona_weaver}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-BAAI/bge-large-zh-v1.5}
+      - INFERENCE_CONVERGENCE_THRESHOLD=${INFERENCE_CONVERGENCE_THRESHOLD:-0.08}
+      - INFERENCE_MIN_EFFECTIVE_WORDS=${INFERENCE_MIN_EFFECTIVE_WORDS:-300}
+      - INFERENCE_MAX_TURNS=${INFERENCE_MAX_TURNS:-50}
+      - INFERENCE_LIGHT_REPORT_WORDS=${INFERENCE_LIGHT_REPORT_WORDS:-600}
+      - SECRET_KEY=${SECRET_KEY:?err}
+      - CRISIS_KEYWORDS=${CRISIS_KEYWORDS:-自杀,自伤,结束生命,不想活,自残,伤害自己}
+      - CRISIS_HELPLINE=${CRISIS_HELPLINE:-心理援助热线：12320（24小时）}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pw-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pw-frontend
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - pw-net
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  pw-net:
+    driver: bridge

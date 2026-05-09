@@ -39,7 +39,7 @@ cd Persona_Weaver
 ### 2. 启动基础设施
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose up -d
 ```
 
 这将启动 PostgreSQL 16（含 pgvector 扩展）和 Redis 7。
@@ -105,16 +105,106 @@ pnpm dev
 
 ```
 Persona_Weaver/
-├── backend/           # FastAPI 后端
-├── frontend/          # React 前端
-├── docker/            # Docker Compose 配置
-├── nginx/             # Nginx 反向代理配置
-├── scripts/           # 工具脚本
-├── docs/              # 文档
-├── .github/           # CI/CD 配置
+├── backend/                  # FastAPI 后端
+│   ├── app/
+│   │   ├── api/              # REST + WebSocket 端点
+│   │   ├── core/             # 配置、安全、中间件、数据库
+│   │   ├── engine/           # 叙事引导、情感反馈、推理评分
+│   │   ├── llm/              # LLM Provider 抽象层
+│   │   ├── models/           # SQLAlchemy 模型
+│   │   ├── schemas/          # Pydantic Schema
+│   │   └── services/         # 业务逻辑层
+│   ├── migrations/           # Alembic 数据库迁移
+│   ├── tests/                # 后端测试 (pytest)
+│   └── Dockerfile
+├── frontend/                 # React 前端
+│   ├── src/
+│   │   ├── components/       # UI 组件（chat/report/settings）
+│   │   ├── hooks/            # 自定义 Hooks（useWebSocket）
+│   │   ├── lib/              # 工具（API 客户端、WebSocket 客户端）
+│   │   ├── pages/            # 路由页面（Home/Chat/Report/Settings/Privacy/Terms）
+│   │   ├── stores/           # Zustand 状态管理
+│   │   └── __tests__/        # 前端测试 (vitest)
+│   └── Dockerfile
+├── scripts/                  # 工具脚本
+│   ├── setup_dev.sh          # 开发环境一键初始化
+│   ├── seed_prompts.py       # 提示词种子数据
+│   └── deploy.sh             # 生产环境一键部署
+├── docker-compose.yml        # 开发环境 Docker Compose
+├── docker-compose.prod.yml   # 生产环境 Docker Compose
+├── .env.production.example   # 生产环境变量模板
+├── .github/                  # Issue/PR 模板
 ├── .gitignore
 ├── LICENSE
 └── README.md
+```
+
+---
+
+## 生产环境部署
+
+### 前置条件
+
+- Docker Engine 20.10+ 和 Docker Compose v2+
+- 一台 Linux 服务器（推荐 Ubuntu 22.04 / CentOS 8+，2 核 4G 以上）
+- 域名（可选，用于 SSL）
+
+### 一键部署
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/YunxiRay/Persona_Weaver.git
+cd Persona_Weaver
+
+# 2. 配置环境变量
+cp .env.production.example .env.production
+# 编辑 .env.production，修改所有密码和 SECRET_KEY
+
+# 3. 执行部署
+bash scripts/deploy.sh
+```
+
+部署完成后访问 `http://<服务器IP>` 即可使用。
+
+### SSL 配置（推荐）
+
+生产环境建议配置 HTTPS。在 `frontend/nginx/default.conf` 中添加 SSL 证书配置，或使用 Nginx Proxy Manager / Caddy 作为前置反向代理。
+
+```nginx
+# 在 frontend/nginx/default.conf 中添加:
+listen 443 ssl;
+ssl_certificate     /etc/nginx/ssl/fullchain.pem;
+ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+```
+
+### 云服务器开通 checklist
+
+1. 安全组规则：开放 80/443 端口，**关闭** 5432（PostgreSQL）和 6379（Redis）公网访问
+2. 域名 DNS 解析到服务器 IP（如有域名）
+3. 安装 Docker：`curl -fsSL https://get.docker.com | bash`
+4. 配置防火墙：`ufw allow 80/tcp && ufw allow 443/tcp`
+5. 设置 swap（2G 以下内存服务器）：`fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile`
+
+### 常用运维命令
+
+```bash
+# 查看服务状态
+docker compose -f docker-compose.prod.yml ps
+
+# 查看日志
+docker compose -f docker-compose.prod.yml logs -f backend
+
+# 重启服务
+docker compose -f docker-compose.prod.yml restart
+
+# 数据库迁移
+docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+
+# 备份数据库
+docker compose -f docker-compose.prod.yml exec postgres pg_dump -U persona persona_weaver > backup.sql
+
+# 停止服务
+docker compose -f docker-compose.prod.yml down
 ```
 
 ---
