@@ -1,3 +1,6 @@
+import json
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -45,6 +48,16 @@ class Settings(BaseSettings):
     # ── 日志 ──
     LOG_LEVEL: str = "DEBUG"
     LOG_FORMAT: str = "json"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

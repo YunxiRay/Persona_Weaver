@@ -4,7 +4,7 @@ import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 
 from app.core.security import check_rate_limit, sanitize_input, detect_crisis, validate_user_input
-from app.engine.chat_pipeline import run_pipeline
+from app.engine.chat_pipeline import generate_opening, run_pipeline
 from app.llm.provider import ProviderConfig
 
 logger = structlog.get_logger(__name__)
@@ -17,6 +17,8 @@ async def chat_websocket(ws: WebSocket) -> None:
     client_ip = ws.client.host if ws.client else "unknown"
 
     try:
+        greeting_sent = False
+
         while True:
             raw = await ws.receive_text()
 
@@ -44,6 +46,20 @@ async def chat_websocket(ws: WebSocket) -> None:
                     model=data.get("model") or None,
                 )
                 await ws.send_json({"type": "config_ack", "provider": provider_cfg.provider})
+
+                # 首次配置后，PW 主动发送开场白
+                if not greeting_sent:
+                    greeting_sent = True
+                    await ws.send_json({
+                        "type": "reply",
+                        "content": generate_opening(),
+                        "phase": "RAPPORT",
+                        "phase_label": "正在建立连接...",
+                        "is_final": False,
+                        "turn": 0,
+                        "mbti_hint": "",
+                        "defense_flags": [],
+                    })
                 continue
 
             if msg_type in ("message", ""):

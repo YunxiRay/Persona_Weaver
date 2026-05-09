@@ -19,6 +19,9 @@
     "react-router-dom": "^6.23.0",
     "zustand": "^4.5.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

@@ -8,6 +8,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
 revision: str = "001"
@@ -44,7 +45,7 @@ def upgrade() -> None:
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("phase", sa.Enum("RAPPORT", "EXPLORATION", "CONFRONTATION", "SYNTHESIS", "ENDED", name="message_phase_enum"), nullable=False),
         sa.Column("effective_word_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("embedding", pgvector.sqlalchemy.Vector(1024), nullable=True),
+        sa.Column("embedding", Vector(1024), nullable=True),
         sa.Column("created_at", sa.String(), nullable=False, server_default=sa.text("now()")),
     )
 

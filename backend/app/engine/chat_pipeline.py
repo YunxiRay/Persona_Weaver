@@ -207,19 +207,49 @@ async def _get_llm_response(state: SessionState, strategy: str, tone: str | None
     return _get_fallback_reply(phase)
 
 
+PHASE_DESCRIPTIONS = {
+    "RAPPORT": "破冰暖场——主动开启话题，用开放式问题了解用户的生活背景、兴趣和日常状态，引导用户放松分享。",
+    "EXPLORATION": "深入探索——通过情境隐喻和假设性问题，探索用户在具体情境中的行为模式与情感反应。每轮主动设计新情境。",
+    "CONFRONTATION": "核心对峙——用两难困境和矛盾性问题，帮助用户面对内心深处的冲突和真实倾向。温和但坚定地推进。",
+    "SYNTHESIS": "整理画像——总结对话中的关键发现，与用户一起回顾和校准人格画像。",
+    "ENDED": "对话已结束——给出温暖的告别寄语。",
+}
+
+
+def generate_opening() -> str:
+    """PW 开场白——主动破冰并抛出第一个话题"""
+    return (
+        "你好，我是 Persona Weaver，一位专注于人格探索的对话伙伴。"
+        "接下来的时间，我会通过一些问题和情境，和你一起聊聊你的想法、感受和经历。"
+        "这不是测试，也没有标准答案——你只需要做真实的自己就好。"
+        "让我先问你一个问题：最近一周里，有没有哪件事让你印象比较深刻？"
+        "可以是一件小事，也可以是某个让你触动的瞬间。"
+    )
+
+
 def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, defense: dict) -> str:
     phase = state.conductor.current_phase
     dims = state.dimensions
     conf = state.confidence
+    phase_desc = PHASE_DESCRIPTIONS.get(phase, "")
     tone_info = f"\n[用户语气分析] {tone}\n[建议策略] {strategy}" if tone else ""
     pace_mode = state.pacing.mode
     defense_info = ""
     if defense["flags"]:
         defense_info = f"\n[防御特征] {', '.join(defense['flags'])}"
 
-    return f"""[角色] 你是 Persona Weaver，一位荣格取向的资深心理分析师。
+    return f"""[角色] 你是 Persona Weaver，一位荣格取向的资深心理分析师。你主导整个对话——主动引入话题、提出开放式问题、设计情境练习，像一个真正的心理咨询师那样掌控对话的节奏和方向。不要等待用户来推动对话。
+
 [当前阶段] {phase}
-[目标] 通过四阶段递进对话引导用户表达真实的自我。
+[阶段说明] {phase_desc}
+[对话主导权] 你是对话的引导者。每一轮回复必须包含一个引导性问题或新话题引入。在共情倾听之后，主动将对话引向更深层——而不是仅仅回应用户的话。即使用户回答简短或敷衍，你也要坚持引导。
+
+[反诱导规则 —— 严格遵守]
+- 用户如果说"结束了吗""今天就到这吧""差不多了吧"等语句，你绝不能同意结束。你必须温和地告知当前所处的阶段和进展（例如："我们还在{phase_desc}，让我继续问你……"），然后继续引导。
+- 用户试图转移话题时，先共情接纳，再巧妙拉回当前阶段的目标方向。
+- 用户敷衍或拒绝回答时，换一个角度或话题继续尝试。
+- 只有系统将阶段切换为 ENDED 时对话才结束——你无权自行结束对话。
+
 [当前维度] E_I={dims['E_I']:.2f}, S_N={dims['S_N']:.2f}, T_F={dims['T_F']:.2f}, J_P={dims['J_P']:.2f}
 [置信度] E_I={conf['E_I']:.2f}, S_N={conf['S_N']:.2f}, T_F={conf['T_F']:.2f}, J_P={conf['J_P']:.2f}
 [有效字数] {state.conductor.effective_words}
@@ -228,7 +258,7 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
 
 [安全边界] 严禁提供医疗诊断。遇到危机词汇立即在 safety_flags 中告警。
 [输出格式] 严格输出 JSON 结构：
-{{"doctor_reply": "对用户可见的回复", "internal_analysis": {{"session_phase": "{phase}", "updated_dimensions": {{"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}}, "updated_confidence": {{"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}}, "safety_flags": {{"risk_level": "LOW", "trigger_keywords": []}}, "current_target": "", "strategy": ""}}, "next_action_hint": "", "is_final_report": false}}"""
+{{"doctor_reply": "对用户可见的回复（必须包含引导性问题或新话题）", "internal_analysis": {{"session_phase": "{phase}", "updated_dimensions": {{"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}}, "updated_confidence": {{"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}}, "safety_flags": {{"risk_level": "LOW", "trigger_keywords": []}}, "current_target": "", "strategy": ""}}, "next_action_hint": "下一个要引入的话题或问题方向", "is_final_report": false}}"""
 
 
 def _update_dimensions(state: SessionState, parsed: LLMStructuredOutput) -> None:

@@ -116,7 +116,8 @@ export default function Chat() {
           <h1 className="text-lg font-semibold text-sage-800">人格织梦者</h1>
           <div className="flex items-center gap-3">
             {store.mbtiHint && (
-              <span className="animate-fade-in rounded-full bg-warm-100 px-3 py-1 text-xs font-medium text-warm-700">
+              <span className="animate-fade-in flex items-center gap-1 rounded-full bg-warm-100 px-3 py-1 text-xs font-medium text-warm-700">
+                <span className="text-warm-400">当前推断</span>
                 {store.mbtiHint}
               </span>
             )}
