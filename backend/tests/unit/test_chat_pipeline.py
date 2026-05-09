@@ -70,13 +70,13 @@ class TestFallbackReply:
 class TestBuildSystemPrompt:
     def test_prompt_contains_phase_and_dimensions(self):
         state = SessionState("test")
-        prompt = _build_system_prompt(state, "NORMAL", None)
+        prompt = _build_system_prompt(state, "NORMAL", None, {"flags": []})
         assert "RAPPORT" in prompt
         assert "E_I" in prompt
         assert "Persona Weaver" in prompt
 
     def test_prompt_contains_tone_info(self):
         state = SessionState("test")
-        prompt = _build_system_prompt(state, "SOOTHE", "用户感到无助")
+        prompt = _build_system_prompt(state, "SOOTHE", "用户感到无助", {"flags": []})
         assert "用户感到无助" in prompt
         assert "SOOTHE" in prompt

@@ -8,6 +8,8 @@ import structlog
 from app.core.config import settings
 from app.engine.empathy.emotion import EmotionAnalyzer, analyze_user_tone
 from app.engine.empathy.pacing import PacingController
+from app.engine.inference.bayesian import BayesianEngine
+from app.engine.inference.defense import DefenseDetector
 from app.engine.narrative.conductor import PHASE_LABELS, Conductor
 from app.llm.output_parser import build_fallback_output, parse_llm_output
 from app.llm.provider import BaseLLMProvider, ProviderConfig
@@ -25,11 +27,14 @@ class SessionState:
         self.session_id = session_id
         self.conductor = Conductor()
         self.pacing = PacingController()
+        self.bayesian = BayesianEngine()
+        self.defense = DefenseDetector()
         self.confidence: dict[str, float] = {"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}
         self.dimensions: dict[str, float] = {"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}
         self.history: list[dict[str, str]] = []
         self.messages: list[dict] = []
         self.provider: BaseLLMProvider | None = None
+        self.last_ai_question: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -37,6 +42,7 @@ class SessionState:
             "conductor": self.conductor.to_dict(),
             "confidence": self.confidence,
             "dimensions": self.dimensions,
+            "bayesian": self.bayesian.summary(),
             "history_size": len(self.history),
         }
 
@@ -55,13 +61,13 @@ async def run_pipeline(
     state.pacing.on_user_input(user_input)
     state.history.append({"role": "user", "content": user_input})
 
-    # Step 2: 情感模块计算情绪参数
-    log.info("pipeline_step", step=2, name="emotion_analysis")
+    # Step 2: 情感分析 + 防御检测
+    log.info("pipeline_step", step=2, name="emotion_and_defense")
     tone_analysis = analyze_user_tone(user_input)
     strategy = EmotionAnalyzer.get_strategy(tone_analysis)
-    log.info("tone_analysis", tone=tone_analysis, strategy=strategy)
+    defense_result = state.defense.analyze(user_input, state.last_ai_question)
+    log.info("analysis", tone=tone_analysis, strategy=strategy, defense_flags=defense_result["flags"])
 
-    # 检测结束/危机词汇
     if strategy == "RESPECT_EXIT":
         state.conductor.set_phase("ENDED")
         return {
@@ -106,22 +112,33 @@ async def run_pipeline(
     word_count = len(user_input.replace(" ", ""))
     state.conductor.advance(word_count)
 
-    reply = await _get_llm_response(state, strategy, tone_analysis)
+    reply = await _get_llm_response(state, strategy, tone_analysis, defense_result)
 
-    # Step 6: 解析 LLM 输出，更新维度
+    # Step 6: 解析 LLM 输出，更新维度和贝叶斯引擎
     log.info("pipeline_step", step=6, name="parse_and_update")
     parsed = parse_llm_output(reply)
     if parsed is None:
         parsed = build_fallback_output(reply)
+
+    # 更新简单维度（LLM 直接输出）
     _update_dimensions(state, parsed)
+    # 更新贝叶斯引擎（带概率推理）
+    _update_bayesian(state, parsed)
 
     # Step 7: 存储消息
     state.history.append({"role": "assistant", "content": parsed.doctor_reply})
-    state.messages.append({"turn": state.conductor.turn_count, "phase": new_phase, "reply": parsed.doctor_reply})
+    state.messages.append({
+        "turn": state.conductor.turn_count,
+        "phase": new_phase,
+        "reply": parsed.doctor_reply,
+        "defense": defense_result,
+    })
+    state.last_ai_question = parsed.doctor_reply
 
     # Step 8: 返回结果
     log.info("pipeline_step", step=8, name="return_reply")
-    is_converged = state.conductor.is_converged(state.confidence)
+    bayesian_summary = state.bayesian.summary()
+    is_converged = state.bayesian.is_converged()
     if is_converged:
         state.conductor.set_phase("SYNTHESIS")
 
@@ -134,6 +151,8 @@ async def run_pipeline(
         "session_id": state.session_id,
         "turn": state.conductor.turn_count,
         "phase_changed": phase_changed,
+        "mbti_hint": bayesian_summary["mbti"],
+        "defense_flags": defense_result["flags"],
     }
 
 
@@ -146,12 +165,10 @@ def _get_or_create_session(session_id: str | None) -> SessionState:
     return state
 
 
-async def _get_llm_response(state: SessionState, strategy: str, tone: str | None) -> str:
+async def _get_llm_response(state: SessionState, strategy: str, tone: str | None, defense: dict) -> str:
     phase = state.conductor.current_phase
-    system_prompt = _build_system_prompt(state, strategy, tone)
+    system_prompt = _build_system_prompt(state, strategy, tone, defense)
     messages = [{"role": "system", "content": system_prompt}]
-
-    # 添加最近 10 轮历史作为上下文
     recent = state.history[-20:]
     messages.extend(recent)
 
@@ -166,12 +183,15 @@ async def _get_llm_response(state: SessionState, strategy: str, tone: str | None
     return _get_fallback_reply(phase)
 
 
-def _build_system_prompt(state: SessionState, strategy: str, tone: str | None) -> str:
+def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, defense: dict) -> str:
     phase = state.conductor.current_phase
     dims = state.dimensions
     conf = state.confidence
     tone_info = f"\n[用户语气分析] {tone}\n[建议策略] {strategy}" if tone else ""
     pace_mode = state.pacing.mode
+    defense_info = ""
+    if defense["flags"]:
+        defense_info = f"\n[防御特征] {', '.join(defense['flags'])}"
 
     return f"""[角色] 你是 Persona Weaver，一位荣格取向的资深心理分析师。
 [当前阶段] {phase}
@@ -180,7 +200,7 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None) -
 [置信度] E_I={conf['E_I']:.2f}, S_N={conf['S_N']:.2f}, T_F={conf['T_F']:.2f}, J_P={conf['J_P']:.2f}
 [有效字数] {state.conductor.effective_words}
 [节奏模式] {pace_mode}
-[当前轮次] 第{state.conductor.turn_count}轮{tone_info}
+[当前轮次] 第{state.conductor.turn_count}轮{tone_info}{defense_info}
 
 [安全边界] 严禁提供医疗诊断。遇到危机词汇立即在 safety_flags 中告警。
 [输出格式] 严格输出 JSON 结构：
@@ -203,6 +223,26 @@ def _update_dimensions(state: SessionState, parsed: LLMStructuredOutput) -> None
         "T_F": new_conf.T_F,
         "J_P": new_conf.J_P,
     }
+
+
+def _update_bayesian(state: SessionState, parsed: LLMStructuredOutput) -> None:
+    internal = parsed.internal_analysis
+    dims = {
+        "E_I": internal.updated_dimensions.E_I,
+        "S_N": internal.updated_dimensions.S_N,
+        "T_F": internal.updated_dimensions.T_F,
+        "J_P": internal.updated_dimensions.J_P,
+    }
+    confs = {
+        "E_I": internal.updated_confidence.E_I,
+        "S_N": internal.updated_confidence.S_N,
+        "T_F": internal.updated_confidence.T_F,
+        "J_P": internal.updated_confidence.J_P,
+    }
+    state.bayesian.update(dims, confs, state.conductor.current_phase)
+    # 同步贝叶斯推结果到简单维度
+    state.dimensions = state.bayesian.dimension_scores()
+    state.confidence = state.bayesian.confidence_values()
 
 
 def _detect_crisis_keywords(text: str) -> bool:
