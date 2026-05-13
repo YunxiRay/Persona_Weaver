@@ -65,3 +65,8 @@ CLAUDE.md
 # ── Misc ──
 *.tmp
 *.bak
+
+# ── Build output ──
+backend/static/
+backend/dist/
+backend/build/

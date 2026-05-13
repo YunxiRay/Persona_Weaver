@@ -185,3 +185,115 @@ class ReportGenerator:
             f"成长的关键不是成为别人，而是在了解自己的基础上，成为更好的自己。"
             f"愿你在自我探索的旅程中，不断发现新的惊喜。"
         )
+
+    def render_html(self, report: dict) -> str:
+        """将报告渲染为独立 HTML 文件（内联 CSS）"""
+        skeleton = report.get("personality_skeleton", {})
+        cognitive = report.get("cognitive_map", {})
+        linguistic = report.get("linguistic_sketch", {})
+        sbti = report.get("sbti_label", {})
+        therapist_note = report.get("therapist_note", "")
+        mbti = skeleton.get("mbti_type", "UNKNOWN")
+        dims = skeleton.get("dimension_scores", {})
+        confs = skeleton.get("confidence", {})
+        keywords = linguistic.get("top_keywords", [])
+        label = PERSONALITY_LABELS.get(mbti, "")
+
+        dim_bars = ""
+        dim_names = {"E_I": ("外向 E", "内向 I"), "S_N": ("感觉 S", "直觉 N"), "T_F": ("思维 T", "情感 F"), "J_P": ("判断 J", "感知 P")}
+        for key, (left, right) in dim_names.items():
+            score = dims.get(key, 0)
+            conf = confs.get(key, 0)
+            pct = int((score + 1) / 2 * 100)
+            bar_color = "#C48059" if pct >= 50 else "#888D66"
+            dim_bars += f"""
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:#53573D;margin-bottom:4px">
+                <span>{left}</span><span style="color:#A86542;font-size:12px">置信度 {conf:.0%}</span><span>{right}</span>
+              </div>
+              <div style="background:#EDEFE6;border-radius:8px;height:10px">
+                <div style="background:{bar_color};width:{pct}%;height:100%;border-radius:8px"></div>
+              </div>
+            </div>"""
+
+        kw_tags = "".join(f'<span style="display:inline-block;background:#F4D9CC;color:#6B3922;padding:3px 12px;border-radius:14px;margin:4px;font-size:13px">{kw}</span>' for kw in keywords[:15])
+
+        # Build cognitive_map dim bars
+        cog_data = cognitive or {}
+        cog_bars = ""
+        scenario_labels = {"work": "工作情境", "relationship": "情感情境", "crisis": "危机情境"}
+        for key, label in scenario_labels.items():
+            scenario = cog_data.get(key, {})
+            cog_bars += f'<div style="margin-bottom:20px"><h3 style="font-size:14px;color:#6B704F;margin-bottom:10px">{label}</h3>'
+            for dim_key, (left, right) in dim_names.items():
+                score = scenario.get(dim_key, 0)
+                pct = int((score + 1) / 2 * 100)
+                bar_color = "#C48059" if pct >= 50 else "#888D66"
+                cog_bars += f"""
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:#53573D;margin-bottom:2px">
+                    <span>{left}</span><span>{right}</span>
+                  </div>
+                  <div style="background:#EDEFE6;border-radius:8px;height:8px">
+                    <div style="background:{bar_color};width:{pct}%;height:100%;border-radius:8px"></div>
+                  </div>
+                </div>"""
+            cog_bars += "</div>"
+
+        return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>人格分析报告 — {mbti}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box }}
+  body {{ font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif; background:#FFFDF7; color:#3C3F2D; line-height:1.7; max-width:720px; margin:0 auto; padding:40px 24px }}
+  h1 {{ text-align:center; font-size:28px; color:#53573D; margin-bottom:8px }}
+  .subtitle {{ text-align:center; color:#A86542; font-size:14px; margin-bottom:32px }}
+  .card {{ background:#fff; border-radius:16px; padding:24px; margin-bottom:20px; box-shadow:0 2px 12px rgba(83,55,61,0.06) }}
+  .card h2 {{ font-size:16px; color:#6B704F; margin-bottom:16px; border-left:3px solid #C48059; padding-left:10px }}
+  .mbti-badge {{ text-align:center; font-size:48px; font-weight:700; color:#C48059; letter-spacing:4px; margin:16px 0 }}
+  .mbti-label {{ text-align:center; color:#888D66; font-size:15px; margin-bottom:16px }}
+  .note {{ background:#FAEEE8; border-radius:12px; padding:20px; font-size:14px; line-height:1.9; color:#6B3922 }}
+  .footer {{ text-align:center; color:#A3A884; font-size:12px; margin-top:40px }}
+  @media print {{ body {{ background:#fff }} .card {{ box-shadow:none; border:1px solid #DADDCC }} }}
+</style></head>
+<body>
+  <h1>人格织梦者</h1>
+  <div class="subtitle">Persona Weaver — AI 心理人格分析报告</div>
+
+  <div class="card">
+    <h2>MBTI 类型</h2>
+    <div class="mbti-badge">{mbti}</div>
+    <div class="mbti-label">{label}</div>
+  </div>
+
+  <div class="card">
+    <h2>四维度得分</h2>
+    {dim_bars}
+  </div>
+
+  <div class="card">
+    <h2>关键词云</h2>
+    <div style="text-align:center">{kw_tags if kw_tags else '<span style="color:#A3A884">数据不足</span>'}</div>
+    <div style="display:flex;justify-content:center;gap:24px;margin-top:16px;font-size:13px;color:#6B704F">
+      <span>抽象词占比 {linguistic.get("abstract_ratio", 0):.0%}</span>
+      <span>具象词占比 {linguistic.get("concrete_ratio", 0):.0%}</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>认知场景</h2>
+    <p style="font-size:13px;color:#888D66;margin-bottom:12px">以下为三个典型场景下的人格维度投射</p>
+    {cog_bars}
+  </div>
+
+  <div class="card">
+    <h2>社交与灵魂</h2>
+    <p style="font-size:14px;color:#53573D;margin-bottom:8px">{sbti.get("social_survival_guide", "")}</p>
+    <p style="font-size:14px;color:#C48059">{sbti.get("soul_match_index", "")}</p>
+  </div>
+
+  <div class="note">{therapist_note}</div>
+
+  <div class="footer">由 人格织梦者 (Persona Weaver) 生成 · 仅供自我探索参考</div>
+</body></html>"""

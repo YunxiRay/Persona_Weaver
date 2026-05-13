@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { PersonalityCard } from "@/components/report/PersonalityCard";
 import { CognitiveMap } from "@/components/report/CognitiveMap";
 import { WordCloud } from "@/components/report/WordCloud";
@@ -36,6 +38,8 @@ export default function Report() {
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [exportToast, setExportToast] = useState("");
+  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -44,6 +48,58 @@ export default function Report() {
       .catch(() => setError("报告未找到，请先完成对话"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const showToast = useCallback((msg: string) => {
+    setExportToast(msg);
+    setTimeout(() => setExportToast(""), 3000);
+  }, []);
+
+  const exportAsPNG = useCallback(async () => {
+    if (!reportRef.current || !id || !report) return;
+    try {
+      const mbti = report.personality_skeleton.mbti_type;
+      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: "#FFFDF7" });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `人格分析报告_${mbti}_${new Date().toISOString().slice(0, 10)}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("报告已导出为 PNG，请查看浏览器下载文件夹");
+      }, "image/png");
+    } catch {
+      showToast("导出失败，请重试");
+    }
+  }, [id, report, showToast]);
+
+  const exportAsPDF = useCallback(async () => {
+    if (!reportRef.current || !id || !report) return;
+    try {
+      const mbti = report.personality_skeleton.mbti_type;
+      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: "#FFFDF7" });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= 297;
+      while (heightLeft > 0) {
+        position = -(imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+      pdf.save(`人格分析报告_${mbti}_${new Date().toISOString().slice(0, 10)}.pdf`);
+      showToast("报告已导出为 PDF，请查看浏览器下载文件夹");
+    } catch {
+      showToast("导出失败，请重试");
+    }
+  }, [id, report, showToast]);
 
   if (loading) {
     return (
@@ -75,7 +131,12 @@ export default function Report() {
 
   return (
     <div className="min-h-screen bg-cream-50 px-4 py-8">
-      <div className="mx-auto max-w-2xl space-y-6">
+      {exportToast && (
+        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 animate-slide-down rounded-xl bg-green-50 border border-green-200 px-5 py-3 shadow-lg">
+          <p className="text-sm text-green-700">{exportToast}</p>
+        </div>
+      )}
+      <div ref={reportRef} className="mx-auto max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center animate-fade-in">
           <h1 className="text-2xl font-bold text-sage-800">人格分析报告</h1>
@@ -126,13 +187,28 @@ export default function Report() {
         </div>
 
         {/* Actions */}
-        <div className="stagger-item flex justify-center gap-4" style={{ animationDelay: "0.6s" }}>
-          <button onClick={() => navigate("/chat")} className="rounded-xl border border-warm-500 px-6 py-2 text-sm text-warm-600 transition-colors hover:bg-warm-50">
-            重新对话
-          </button>
-          <button onClick={() => navigate("/")} className="rounded-xl border border-sage-300 px-6 py-2 text-sm text-sage-600 transition-colors hover:bg-sage-50">
-            返回首页
-          </button>
+        <div className="stagger-item flex flex-col items-center gap-3" style={{ animationDelay: "0.6s" }}>
+          <div className="flex justify-center gap-4">
+            <button onClick={() => navigate("/chat")} className="rounded-xl border border-warm-500 px-6 py-2 text-sm text-warm-600 transition-colors hover:bg-warm-50">
+              重新对话
+            </button>
+            <button
+              onClick={exportAsPNG}
+              className="rounded-xl bg-warm-500 px-6 py-2 text-sm text-white transition-colors hover:bg-warm-600"
+            >
+              导出为图片
+            </button>
+            <button
+              onClick={exportAsPDF}
+              className="rounded-xl bg-sage-700 px-6 py-2 text-sm text-white transition-colors hover:bg-sage-800"
+            >
+              导出为 PDF
+            </button>
+            <button onClick={() => navigate("/")} className="rounded-xl border border-sage-300 px-6 py-2 text-sm text-sage-600 transition-colors hover:bg-sage-50">
+              返回首页
+            </button>
+          </div>
+          <p className="text-xs text-sage-400">导出为高清 PNG 图片或 A4 PDF 文件，方便保存和分享</p>
         </div>
       </div>
     </div>

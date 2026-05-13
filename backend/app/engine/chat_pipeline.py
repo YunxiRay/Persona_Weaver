@@ -1,5 +1,6 @@
 """对话 Pipeline 编排器 — 8 步骤全链路处理"""
 
+import asyncio
 import json
 import uuid
 
@@ -29,14 +30,58 @@ async def _generate_report(state: "SessionState") -> dict | None:
     try:
         all_user_msgs = [m["content"] for m in state.history if m["role"] == "user"]
         generator = ReportGenerator(state.provider)
-        return await generator.generate(
+        report_data = await generator.generate(
             engine=state.bayesian,
             all_messages=all_user_msgs,
             history=state.history,
         )
+        # 持久化到数据库（解决 exe 重启丢失）
+        await _persist_report(state.session_id, report_data)
+        return report_data
     except Exception as e:
         logger.error("report_generation_failed", error=str(e))
         return None
+
+
+async def _persist_report(session_id: str, report_data: dict) -> None:
+    """将报告持久化到数据库"""
+    import uuid as _uuid
+    from app.core.database import get_session_factory
+    from app.services.report_service import ReportService
+
+    try:
+        sid = _uuid.UUID(session_id)
+        mbti_type = report_data.get("personality_skeleton", {}).get("mbti_type", "????")
+        factory = get_session_factory()
+        async with factory() as db:
+            await _ensure_session_exists(db, sid)
+            svc = ReportService(db)
+            await svc.create(sid, mbti_type, report_data)
+            logger.info("report_persisted_to_db", session_id=session_id, mbti=mbti_type)
+    except Exception as e:
+        logger.error("report_persist_failed", error=str(e))
+
+
+async def _ensure_session_exists(db, session_id) -> None:
+    """确保 session 和 user 记录存在（解决 FK 约束问题）"""
+    import uuid as _uuid
+    from sqlalchemy import select
+    from app.models.session import Session
+    from app.models.user import User
+
+    # Check if session exists
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    if result.scalar_one_or_none():
+        return
+
+    # Create dummy user if needed (single-user desktop app)
+    dummy_uid = _uuid.UUID("00000000-0000-0000-0000-000000000001")
+    result = await db.execute(select(User).where(User.id == dummy_uid))
+    if not result.scalar_one_or_none():
+        db.add(User(id=dummy_uid, nickname="本地用户"))
+
+    db.add(Session(id=session_id, user_id=dummy_uid))
+    await db.commit()
 
 
 class SessionState:
@@ -129,7 +174,22 @@ async def run_pipeline(
     word_count = len(user_input.replace(" ", ""))
     state.conductor.advance(word_count)
 
-    reply = await _get_llm_response(state, strategy, tone_analysis, defense_result)
+    llm_result = await _get_llm_response(state, strategy, tone_analysis, defense_result)
+    reply = llm_result["content"]
+    finish_reason = llm_result.get("finish_reason", "stop")
+
+    # 截断检测：finish_reason == "length" 或内容过长时触发压缩回捞
+    is_truncated = finish_reason == "length"
+    is_too_long = len(reply) > 2000
+    if (is_truncated or is_too_long) and state.provider:
+        log.info("reply_needs_compression", truncated=is_truncated, length=len(reply))
+        try:
+            compressed = await _compress_reply(state, reply)
+            if compressed:
+                reply = compressed
+                log.info("reply_compressed", new_length=len(reply))
+        except Exception as e:
+            logger.error("compression_failed", error=str(e))
 
     # Step 6: 解析 LLM 输出，更新维度和贝叶斯引擎
     log.info("pipeline_step", step=6, name="parse_and_update")
@@ -142,6 +202,11 @@ async def run_pipeline(
     # 更新贝叶斯引擎（带概率推理）
     _update_bayesian(state, parsed)
 
+    # Phase 11: 优先使用 LLM defense_flags，keyword 作为 fallback
+    llm_defense_flags = parsed.internal_analysis.defense_flags
+    if llm_defense_flags:
+        defense_result = state.defense.from_llm_flags(llm_defense_flags)
+
     # Step 7: 存储消息
     state.history.append({"role": "assistant", "content": parsed.doctor_reply})
     state.messages.append({
@@ -152,10 +217,31 @@ async def run_pipeline(
     })
     state.last_ai_question = parsed.doctor_reply
 
+    # Phase 10: 轮次上限提示
+    turn_hint = ""
+    if state.conductor.turn_count >= 48:
+        turn_hint = "\n\n📋 本轮对话即将完成分析，这是最后两轮，请确认没有遗漏重要信息。"
+    elif state.conductor.turn_count >= 40:
+        turn_hint = "\n\n💡 提示：对话分析已接近尾声，如有未尽的话题，可以在接下来的几轮中补充。"
+    content = parsed.doctor_reply + turn_hint
+
     # Step 8: 检查收敛，自动生成报告
     log.info("pipeline_step", step=8, name="check_convergence_and_report")
     bayesian_summary = state.bayesian.summary()
-    is_converged = state.bayesian.is_converged()
+
+    # Persist dimension snapshot for per-turn tracking
+    await _persist_dimension_snapshot(state)
+
+    # Run inference validator at later turns
+    if state.conductor.turn_count >= 8:
+        _validate_inference(state)
+
+    # 收敛判据 = std收敛 OR (≥12轮 AND MBTI连续5轮不变)
+    mbti_stable = state.bayesian.mbti_stable_for(rounds=5)
+    is_converged = state.bayesian.is_converged() or (state.conductor.turn_count >= 12 and mbti_stable)
+    if mbti_stable and state.conductor.turn_count >= 8:
+        log.info("mbti_stabilized", mbti=bayesian_summary["mbti"], turns=state.conductor.turn_count)
+
     report_data = None
     if is_converged:
         state.conductor.set_phase("SYNTHESIS")
@@ -167,7 +253,7 @@ async def run_pipeline(
 
     return {
         "type": "reply",
-        "content": parsed.doctor_reply,
+        "content": content,
         "phase": new_phase,
         "phase_label": PHASE_LABELS.get(new_phase, ""),
         "is_final": is_converged and state.conductor.turn_count >= 10,
@@ -177,6 +263,7 @@ async def run_pipeline(
         "mbti_hint": bayesian_summary["mbti"],
         "defense_flags": defense_result["flags"],
         "report": report_data,
+        "error_hint": llm_result.get("error_hint"),
     }
 
 
@@ -189,22 +276,46 @@ def _get_or_create_session(session_id: str | None) -> SessionState:
     return state
 
 
-async def _get_llm_response(state: SessionState, strategy: str, tone: str | None, defense: dict) -> str:
+async def _get_llm_response(state: SessionState, strategy: str, tone: str | None, defense: dict) -> dict:
+    """调用 LLM 获取回复，含重试和降级。返回 {"content": str, "error_hint": str|None, "finish_reason": str}"""
     phase = state.conductor.current_phase
     system_prompt = _build_system_prompt(state, strategy, tone, defense)
     messages = [{"role": "system", "content": system_prompt}]
     recent = state.history[-20:]
     messages.extend(recent)
 
-    if state.provider:
+    if not state.provider:
+        return {"content": _get_fallback_reply(phase), "error_hint": None, "finish_reason": "stop"}
+
+    for attempt in range(2):
         try:
             resp = await state.provider.chat(messages=messages, temperature=0.7, max_tokens=2048)
-            return resp.content
+            return {"content": resp.content, "error_hint": None, "finish_reason": resp.finish_reason}
         except Exception as e:
-            logger.error("llm_call_failed", error=str(e))
-            return _get_fallback_reply(phase)
+            logger.error("llm_call_failed", error=str(e), attempt=attempt + 1)
+            if attempt == 0:
+                await asyncio.sleep(2)
 
-    return _get_fallback_reply(phase)
+    # 两次均失败，降级
+    fallback = _get_fallback_reply(phase)
+    return {"content": fallback, "error_hint": "llm_retry_failed", "finish_reason": "stop"}
+
+
+async def _compress_reply(state: SessionState, raw_content: str, max_chars: int = 600) -> str:
+    """请求 LLM 将过长或截断的回复压缩到合理长度"""
+    if not state.provider:
+        return raw_content[:max_chars]
+    prompt = f"请将以下文本压缩到{max_chars}字以内，保留核心观点和引导性问题：\n\n{raw_content[:3000]}"
+    try:
+        resp = await state.provider.chat(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=1024,
+        )
+        return resp.content.strip() or raw_content[:max_chars]
+    except Exception as e:
+        logger.error("compress_reply_failed", error=str(e))
+        return raw_content[:max_chars]
 
 
 PHASE_DESCRIPTIONS = {
@@ -250,6 +361,11 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
 - 用户敷衍或拒绝回答时，换一个角度或话题继续尝试。
 - 只有系统将阶段切换为 ENDED 时对话才结束——你无权自行结束对话。
 
+[独立评估规则 —— 严格遵守]
+- 每轮对话中，请基于当前轮用户的表达独立评估其人格维度，不要为了与前几轮的评估结果保持一致而忽略新出现的矛盾信息。
+- 用户在对话过程中可能逐渐放下防备或展现不同的人格面向。如果用户当前轮的表述与之前形成的人设不一致，优先采信当前轮的表述。
+- 允许你的评估结果在不同轮次之间出现波动甚至反转——这正是深度对话的意义。
+
 [当前维度] E_I={dims['E_I']:.2f}, S_N={dims['S_N']:.2f}, T_F={dims['T_F']:.2f}, J_P={dims['J_P']:.2f}
 [置信度] E_I={conf['E_I']:.2f}, S_N={conf['S_N']:.2f}, T_F={conf['T_F']:.2f}, J_P={conf['J_P']:.2f}
 [有效字数] {state.conductor.effective_words}
@@ -258,7 +374,9 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
 
 [安全边界] 严禁提供医疗诊断。遇到危机词汇立即在 safety_flags 中告警。
 [输出格式] 严格输出 JSON 结构：
-{{"doctor_reply": "对用户可见的回复（必须包含引导性问题或新话题）", "internal_analysis": {{"session_phase": "{phase}", "updated_dimensions": {{"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}}, "updated_confidence": {{"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}}, "safety_flags": {{"risk_level": "LOW", "trigger_keywords": []}}, "current_target": "", "strategy": ""}}, "next_action_hint": "下一个要引入的话题或问题方向", "is_final_report": false}}"""
+{{"doctor_reply": "对用户可见的回复（必须包含引导性问题或新话题，控制在600字以内）", "internal_analysis": {{"session_phase": "{phase}", "updated_dimensions": {{"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}}, "updated_confidence": {{"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}}, "safety_flags": {{"risk_level": "LOW", "trigger_keywords": []}}, "defense_flags": [], "current_target": "", "strategy": ""}}, "next_action_hint": "下一个要引入的话题或问题方向", "is_final_report": false}}
+
+[defense_flags 说明] 检测用户当前轮的防御特征，可选值: "avoidance"（回避问题）、"idealization"（过度美化）、"devaluation"（过度贬低）、"splitting"（分裂），无防御特征时返回空数组 []。"""
 
 
 def _update_dimensions(state: SessionState, parsed: LLMStructuredOutput) -> None:
@@ -294,9 +412,9 @@ def _update_bayesian(state: SessionState, parsed: LLMStructuredOutput) -> None:
         "J_P": internal.updated_confidence.J_P,
     }
     state.bayesian.update(dims, confs, state.conductor.current_phase)
-    # 同步贝叶斯推结果到简单维度
-    state.dimensions = state.bayesian.dimension_scores()
-    state.confidence = state.bayesian.confidence_values()
+    # 不再覆盖 state.dimensions / state.confidence
+    # 保留 LLM 当轮原始估计，用于下轮系统提示词，打破反馈环
+    # Bayesian 聚合值仅在返回前端 (mbti_hint) 和报告生成时使用
 
 
 def _detect_crisis_keywords(text: str) -> bool:
@@ -313,3 +431,46 @@ def _get_fallback_reply(phase: str) -> str:
         "ENDED": "感谢你今天的分享。",
     }
     return replies.get(phase, "我明白，请继续。")
+
+
+async def _persist_dimension_snapshot(state: SessionState) -> None:
+    """每轮持久化维度快照到数据库"""
+    import uuid as _uuid
+    from app.core.database import get_session_factory
+    from app.models.dimension_snapshot import DimensionSnapshot
+
+    try:
+        bayesian_scores = state.bayesian.dimension_scores()
+        bayesian_confs = state.bayesian.confidence_values()
+        factory = get_session_factory()
+        async with factory() as db:
+            await _ensure_session_exists(db, _uuid.UUID(state.session_id))
+            snapshot = DimensionSnapshot(
+                session_id=_uuid.UUID(state.session_id),
+                turn_number=state.conductor.turn_count,
+                E_I=bayesian_scores["E_I"],
+                S_N=bayesian_scores["S_N"],
+                T_F=bayesian_scores["T_F"],
+                J_P=bayesian_scores["J_P"],
+                confidence_E_I=bayesian_confs["E_I"],
+                confidence_S_N=bayesian_confs["S_N"],
+                confidence_T_F=bayesian_confs["T_F"],
+                confidence_J_P=bayesian_confs["J_P"],
+            )
+            db.add(snapshot)
+            await db.commit()
+    except Exception as e:
+        logger.error("dimension_snapshot_persist_failed", error=str(e))
+
+
+def _validate_inference(state: SessionState) -> None:
+    """调用推理校验器，输出警告到日志"""
+    from app.engine.inference.validator import InferenceValidator
+
+    try:
+        validator = InferenceValidator(state.bayesian)
+        result = validator.validate()
+        if result.get("warnings"):
+            logger.warning("inference_validation", warnings=result["warnings"])
+    except Exception as e:
+        logger.error("inference_validator_failed", error=str(e))

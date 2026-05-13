@@ -19,7 +19,8 @@ MBTI_PRIORS: dict[str, dict[str, float]] = {
     "J_P": {"alpha": 2.16, "beta": 1.84},   # J≈54%, P≈46%
 }
 
-OBSERVATION_WEIGHT = 3.0  # 每次 LLM 观测的伪计数权重基数
+OBSERVATION_WEIGHT = 1.0  # 每次 LLM 观测的伪计数权重基数
+DECAY_RATE = 0.9  # 时间衰减系数：每轮对历史观测打 9 折，让近期对话权重更高
 
 
 class DimensionTracker:
@@ -55,6 +56,13 @@ class DimensionTracker:
 
     def update(self, observed_score: float, confidence: float, phase: str) -> None:
         """observed_score ∈ [-1, 1]（LLM 输出的维度值），confidence ∈ [0, 1]"""
+        # ── 时间衰减：让历史观测权重指数级下降，防止早期印象锁死 ──
+        if self.sample_count > 0:
+            prior_alpha = MBTI_PRIORS[self.name]["alpha"]
+            prior_beta = MBTI_PRIORS[self.name]["beta"]
+            self.alpha = prior_alpha + (self.alpha - prior_alpha) * DECAY_RATE
+            self.beta = prior_beta + (self.beta - prior_beta) * DECAY_RATE
+
         p = (observed_score + 1.0) / 2.0  # 映射到 [0, 1]
         p = max(0.01, min(0.99, p))       # 避免极端值导致退化
         weight = confidence * OBSERVATION_WEIGHT
@@ -86,15 +94,29 @@ class BayesianEngine:
 
     def __init__(self):
         self.trackers: dict[str, DimensionTracker] = {d: DimensionTracker(d) for d in DIMENSIONS}
+        self.mbti_history: list[str] = []  # 最近 N 轮的 MBTI 类型序列
 
     def update(self, dimensions: dict[str, float], confidence: dict[str, float], phase: str) -> None:
         for dim in DIMENSIONS:
             score = dimensions.get(dim, 0.0)
             conf = confidence.get(dim, 0.5)
             self.trackers[dim].update(score, conf, phase)
+        # 记录本轮 MBTI 类型
+        self.mbti_history.append(self.determine_mbti())
+        # 只保留最近 10 条
+        if len(self.mbti_history) > 10:
+            self.mbti_history = self.mbti_history[-10:]
 
     def is_converged(self) -> bool:
+        """std 判据：所有维度后验标准差低于阈值"""
         return all(t.is_converged for t in self.trackers.values())
+
+    def mbti_stable_for(self, rounds: int = 5) -> bool:
+        """检查 MBTI 类型是否在过去 N 轮中保持不变"""
+        if len(self.mbti_history) < rounds:
+            return False
+        recent = self.mbti_history[-rounds:]
+        return len(set(recent)) == 1
 
     def dimension_scores(self) -> dict[str, float]:
         return {d: self.trackers[d].dimension_score() for d in DIMENSIONS}
@@ -116,4 +138,5 @@ class BayesianEngine:
             "mbti": self.determine_mbti(),
             "dimensions": {d: self.trackers[d].to_dict() for d in DIMENSIONS},
             "converged": self.is_converged(),
+            "mbti_history": self.mbti_history,
         }

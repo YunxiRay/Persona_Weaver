@@ -217,3 +217,41 @@ docker compose -f docker-compose.prod.yml down
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## 修复记录
+
+### 2025-05-13 — 五大问题集中修复
+
+#### 1. 顶部状态栏粘性固定
+- **问题**: 设置、当前推断状态、轮次、对话阶段等信息随页面滚动被覆盖消失
+- **修复**: `frontend/src/pages/Chat.tsx` — `<header>` 和 `<PhaseIndicator>` 包裹在 `sticky top-0 z-10` 容器中，滚动时始终固定在页面上方
+
+#### 2. 模型输出截断 — "压缩回捞"
+- **问题**: 对话后期模型输出内容被截断，影响阅读完整性
+- **根因**: `chat_pipeline.py` 硬编码 `max_tokens=2048`，系统提示词要求输出 JSON 结构体，与 `doctor_reply` 共用 token 预算；JSON 截断后解析失败，fallback 再截至 500 字符
+- **修复**:
+  - 系统提示词 `doctor_reply` 增加 "控制在600字以内" 指引
+  - 新增 `_compress_reply()` 函数：检测到 `finish_reason == "length"` 或内容 >2000 字符时，调轻量 LLM 压缩请求
+  - `output_parser.py` fallback 截断 500 → 2000 字符
+
+#### 3. 导出报告格式与提示
+- **问题**: 导出报告后不知存储位置；HTML 格式不便于分享；exe 重启后报告丢失
+- **修复**:
+  - `frontend/src/pages/Report.tsx` — 使用 `html2canvas` + `jsPDF` 替代 HTML 导出，支持 PNG 图片和 A4 PDF，导出后 toast 提示
+  - `chat_pipeline.py` — 报告生成时同步持久化到 SQLite 数据库
+
+#### 4. 人格分析计算 — 多层锁死防御
+- **问题**: 第一轮对话后人格类型不再变化；认知地图数据残缺
+- **根因**: 多层级锁死——(a) `OBSERVATION_WEIGHT=3.0` 导致贝叶斯 5 轮内收敛；(b) 系统提示词反馈环：Bayesian 聚合值送回 LLM 引导"确认"；(c) LLM 上下文锚定偏差；(d) 提前退出阈值对慢热用户过早触发；(e) 维度间非正交污染
+- **修复**:
+  - `bayesian.py` — `OBSERVATION_WEIGHT` 3.0→1.0；新增 `DECAY_RATE=0.9` 时间衰减因子；新增 MBTI 历史追踪和 `mbti_stable_for()` 方法
+  - `chat_pipeline.py` — 打破反馈环（不再用 Bayesian 聚合值覆盖 `state.dimensions`）；新增 "独立评估规则" 缓解 LLM 锚定偏差；收敛判据改为组合判据；新增 `_persist_dimension_snapshot` 每轮写维度快照；新增 `_validate_inference` 接入校验器
+  - `conductor.py` — `CONFIDENCE_THRESHOLD` 0.85→0.70；提前跳出增加最小 10 轮保底
+  - `defense.py` — 修复 `relevant_chars` 从未递增导致 `overall_invalid_rate` 恒为 1.0 的 bug
+  - `report_generator.py` — 认知地图 HTML 从占位文字改为完整三维度条形图
+
+#### 5. 首次设置 API Key 提醒
+- **问题**: 未提醒用户使用全新 API Key，可能混入其他 AI 应用的历史对话上下文
+- **修复**: `frontend/src/pages/Settings.tsx` — 欢迎横幅增加 "建议使用全新的 API Key" 安全提醒

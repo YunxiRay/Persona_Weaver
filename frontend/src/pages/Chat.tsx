@@ -59,6 +59,8 @@ export default function Chat() {
       if (d.phase) store.setPhase(d.phase as string, d.phase_label as string);
       if (d.mbti_hint) store.setMbtiHint(d.mbti_hint as string);
       if (d.defense_flags) store.setDefenseFlags(d.defense_flags as string[]);
+      if (d.turn !== undefined) store.setTurn(d.turn as number);
+      if (d.error_hint) store.setErrorHint(d.error_hint as string);
       if (d.is_final) {
         store.setIsFinal(true);
         if (d.report && d.session_id) {
@@ -111,35 +113,37 @@ export default function Chat() {
 
   return (
     <div className="flex min-h-screen flex-col bg-cream-50">
-      <header className="border-b border-sage-200 bg-cream-50 px-4 py-3">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <h1 className="text-lg font-semibold text-sage-800">人格织梦者</h1>
-          <div className="flex items-center gap-3">
-            {store.mbtiHint && (
-              <span className="animate-fade-in flex items-center gap-1 rounded-full bg-warm-100 px-3 py-1 text-xs font-medium text-warm-700">
-                <span className="text-warm-400">当前推断</span>
-                {store.mbtiHint}
-              </span>
-            )}
-            <span className={`h-2 w-2 rounded-full transition-colors duration-300 ${
-              store.connectionStatus === "connected"
-                ? "bg-green-500"
-                : store.connectionStatus === "connecting"
-                  ? "bg-yellow-400 animate-pulse-once"
-                  : "bg-red-400"
-            }`} />
-            <button
-              type="button"
-              onClick={() => navigate("/settings")}
-              className="text-xs text-sage-500 underline"
-            >
-              设置
-            </button>
+      <div className="sticky top-0 z-10 bg-cream-50">
+        <header className="border-b border-sage-200 px-4 py-3">
+          <div className="mx-auto flex max-w-2xl items-center justify-between">
+            <h1 className="text-lg font-semibold text-sage-800">人格织梦者</h1>
+            <div className="flex items-center gap-3">
+              {store.mbtiHint && (
+                <span className="animate-fade-in flex items-center gap-1 rounded-full bg-warm-100 px-3 py-1 text-xs font-medium text-warm-700">
+                  <span className="text-warm-400">当前推断</span>
+                  {store.mbtiHint}
+                </span>
+              )}
+              <span className={`h-2 w-2 rounded-full transition-colors duration-300 ${
+                store.connectionStatus === "connected"
+                  ? "bg-green-500"
+                  : store.connectionStatus === "connecting"
+                    ? "bg-yellow-400 animate-pulse-once"
+                    : "bg-red-400"
+              }`} />
+              <button
+                type="button"
+                onClick={() => navigate("/settings")}
+                className="text-xs text-sage-500 underline"
+              >
+                设置
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <PhaseIndicator phase={store.phase} phaseLabel={store.phaseLabel} />
+        <PhaseIndicator phase={store.phase} phaseLabel={store.phaseLabel} turn={store.turn} />
+      </div>
 
       {/* Idle reminder */}
       {showIdleHint && (
@@ -171,6 +175,11 @@ export default function Chat() {
               typing={m.id === typingMessageId && m.role === "assistant"}
             />
           ))}
+          {store.errorHint && (
+            <div className="mb-4 animate-fade-in rounded-xl bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+              模型响应延迟，已为您切换到备用模式。如持续出现，请检查网络或 API Key。
+            </div>
+          )}
           {store.error && (
             <div className="mb-4 animate-fade-in rounded-xl bg-red-50 px-4 py-2 text-sm text-red-500">
               {store.error}

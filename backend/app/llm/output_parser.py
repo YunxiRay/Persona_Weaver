@@ -61,7 +61,7 @@ def build_fallback_output(raw_content: str) -> LLMStructuredOutput:
     from app.schemas.llm import InternalAnalysis, SafetyFlags, UpdatedConfidence, UpdatedDimension
 
     return LLMStructuredOutput(
-        doctor_reply=raw_content[:500] or "我理解你的意思，能再多说说吗？",
+        doctor_reply=raw_content[:2000] or "我理解你的意思，能再多说说吗？",
         is_final_report=False,
         internal_analysis=InternalAnalysis(
             session_phase="RAPPORT",

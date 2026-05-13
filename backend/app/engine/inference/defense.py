@@ -46,6 +46,10 @@ class DefenseDetector:
         # 1. 回应相关性检测
         relevance = self._check_relevance(user_input, last_ai_question)
 
+        # 追踪相关字符数（修复 relevant_chars 永不为0的bug）
+        if relevance > 0.3:
+            self.relevant_chars += total_chars
+
         # 2. 无效信息率
         if total_chars > 0:
             invalid_rate = 1.0 - relevance
@@ -109,6 +113,13 @@ class DefenseDetector:
             return 0.3  # 太短通常不够相关
 
         return min(1.0, len(overlap) / max(len(guide_words), 1) * 1.5)
+
+    def from_llm_flags(self, llm_flags: list[str]) -> dict:
+        """优先使用 LLM 返回的 defense_flags，仅合并持续回避检测"""
+        flags = [f for f in llm_flags if f in ("avoidance", "idealization", "devaluation", "splitting")]
+        if self.consecutive_avoid_count >= 3 and "avoidance" not in flags:
+            flags.append("avoidance_pattern")
+        return {"flags": flags, "source": "llm" if llm_flags else "keyword"}
 
     def reset(self) -> None:
         self.consecutive_avoid_count = 0

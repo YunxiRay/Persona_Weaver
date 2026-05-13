@@ -15,7 +15,7 @@ MIN_TURNS_PER_PHASE: dict[str, int] = {
     "SYNTHESIS": 2,
 }
 
-CONFIDENCE_THRESHOLD = 0.85
+CONFIDENCE_THRESHOLD = 0.70
 CONVERGENCE_THRESHOLD = settings.INFERENCE_CONVERGENCE_THRESHOLD  # 0.08
 
 PHASE_LABELS: dict[str, str] = {
@@ -86,8 +86,11 @@ class Conductor:
         return self._all_confident(confidence)
 
     def _should_skip_to_synthesis(self, confidence: dict[str, float]) -> bool:
-        """若在早期阶段四维置信度均已极高（>0.85）+ 有效字数充足，可跳过对峙期"""
+        """若在早期阶段四维置信度均已极高 + 有效字数充足 + 最小轮次满足，可跳过对峙期"""
         if self.current_phase not in ("RAPPORT", "EXPLORATION"):
+            return False
+        # 最小探索轮次保底：即使置信度达标，也必须至少聊满 10 轮
+        if self.turn_count < 10:
             return False
         return self._all_confident(confidence) and self.effective_words >= 600
 
