@@ -255,3 +255,25 @@ docker compose -f docker-compose.prod.yml down
 #### 5. 首次设置 API Key 提醒
 - **问题**: 未提醒用户使用全新 API Key，可能混入其他 AI 应用的历史对话上下文
 - **修复**: `frontend/src/pages/Settings.tsx` — 欢迎横幅增加 "建议使用全新的 API Key" 安全提醒
+
+### 2025-05-13 — 问题4深度修复 v4
+
+#### A. 认知地图雷达图重写
+- **问题**: 内向/直觉/感知型用户的雷达图几乎空白（`Math.max(0, score)` 将所有负值抹为0）；T_F 符号约定前后端相反（后端正=F情感，前端正=T思维）；轴标签仅标注单一极点
+- **修复**: `frontend/src/components/report/CognitiveMap.tsx` — `toSeriesData()` 改用 `Math.abs()`；INDICATORS 改为双极标注（"内向 I ⟷ 外向 E"）；T_F 符号与后端对齐；每个场景显示 MBTI 偏好方向
+
+#### B. 系统提示词去除数值锚定
+- **问题**: 系统提示词中 `[当前维度] E_I=0.65...` 和 `[置信度] E_I=0.85...` 与"独立评估规则"形成矛盾——数值锚定效应强于文本指令，LLM 倾向于维持已有分数
+- **修复**: `backend/app/engine/chat_pipeline.py` — 删除 L369-370 的维度和置信度数值行，替换为定性描述"不预设结论，不参考之前的评分数值"
+
+#### C. 导出报告修复（webview 兼容）
+- **问题**: `URL.createObjectURL` + `<a download>` 在 pywebview 嵌入式浏览器中不触发下载 UI，用户找不到文件
+- **修复**: `frontend/src/pages/Report.tsx` — PDF 改用 `window.print()` 调起系统打印对话框；PNG 改用 `showSaveFilePicker()` 让用户选择保存位置，不支持时回退到传统下载
+
+#### D. 认知地图数据修正
+- **问题**: `build_cognitive_map()` 的 12 个场景乘数均为硬编码常量（work: E_I×1.1, crisis: J_P×-0.4...），与用户对话内容无关
+- **修复**: `backend/app/services/report_generator.py` — 移除全部硬编码乘数，三个场景统一使用 Bayesian 原始分数
+
+#### E. 推理调试接口
+- **需求**: 从头完整对话测试耗时太长
+- **实现**: `backend/app/api/routes/debug.py` — 新增 `POST /api/v1/debug/inference-test`，批量注入模拟消息运行管道，返回每轮 LLM 原始估计、Bayesian 聚合值、标准差、MBTI 变化历史和收敛状态

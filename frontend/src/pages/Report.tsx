@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import { PersonalityCard } from "@/components/report/PersonalityCard";
 import { CognitiveMap } from "@/components/report/CognitiveMap";
 import { WordCloud } from "@/components/report/WordCloud";
@@ -59,16 +58,32 @@ export default function Report() {
     try {
       const mbti = report.personality_skeleton.mbti_type;
       const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: "#FFFDF7" });
-      canvas.toBlob((blob) => {
-        if (!blob) return;
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) { showToast("导出失败，请重试"); return; }
+      const filename = `人格分析报告_${mbti}_${new Date().toISOString().slice(0, 10)}.png`;
+
+      try {
+        // 尝试使用 showSaveFilePicker（Chromium/webview 支持）
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: "PNG Image", accept: { "image/png": [".png"] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        showToast("报告已保存为 PNG");
+      } catch {
+        // 回退：传统 download 方式
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `人格分析报告_${mbti}_${new Date().toISOString().slice(0, 10)}.png`;
+        a.download = filename;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast("报告已导出为 PNG，请查看浏览器下载文件夹");
-      }, "image/png");
+      }
     } catch {
       showToast("导出失败，请重试");
     }
@@ -76,29 +91,8 @@ export default function Report() {
 
   const exportAsPDF = useCallback(async () => {
     if (!reportRef.current || !id || !report) return;
-    try {
-      const mbti = report.personality_skeleton.mbti_type;
-      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: "#FFFDF7" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= 297;
-      while (heightLeft > 0) {
-        position = -(imgHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= 297;
-      }
-      pdf.save(`人格分析报告_${mbti}_${new Date().toISOString().slice(0, 10)}.pdf`);
-      showToast("报告已导出为 PDF，请查看浏览器下载文件夹");
-    } catch {
-      showToast("导出失败，请重试");
-    }
+    showToast('正在准备打印，请在打印对话框中选择「另存为 PDF」');
+    setTimeout(() => window.print(), 300);
   }, [id, report, showToast]);
 
   if (loading) {
@@ -196,19 +190,19 @@ export default function Report() {
               onClick={exportAsPNG}
               className="rounded-xl bg-warm-500 px-6 py-2 text-sm text-white transition-colors hover:bg-warm-600"
             >
-              导出为图片
+              保存为图片
             </button>
             <button
               onClick={exportAsPDF}
               className="rounded-xl bg-sage-700 px-6 py-2 text-sm text-white transition-colors hover:bg-sage-800"
             >
-              导出为 PDF
+              打印为 PDF
             </button>
             <button onClick={() => navigate("/")} className="rounded-xl border border-sage-300 px-6 py-2 text-sm text-sage-600 transition-colors hover:bg-sage-50">
               返回首页
             </button>
           </div>
-          <p className="text-xs text-sage-400">导出为高清 PNG 图片或 A4 PDF 文件，方便保存和分享</p>
+          <p className="text-xs text-sage-400">"保存为图片"可选择保存位置；"打印为 PDF"请在打印对话框中选择"另存为 PDF"</p>
         </div>
       </div>
     </div>

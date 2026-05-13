@@ -366,8 +366,7 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
 - 用户在对话过程中可能逐渐放下防备或展现不同的人格面向。如果用户当前轮的表述与之前形成的人设不一致，优先采信当前轮的表述。
 - 允许你的评估结果在不同轮次之间出现波动甚至反转——这正是深度对话的意义。
 
-[当前维度] E_I={dims['E_I']:.2f}, S_N={dims['S_N']:.2f}, T_F={dims['T_F']:.2f}, J_P={dims['J_P']:.2f}
-[置信度] E_I={conf['E_I']:.2f}, S_N={conf['S_N']:.2f}, T_F={conf['T_F']:.2f}, J_P={conf['J_P']:.2f}
+[评估状态] 你已在对话过程中逐步形成对用户人格的初步理解。请基于当前轮用户的表达继续独立评估，不预设结论，不参考之前的评分数值。
 [有效字数] {state.conductor.effective_words}
 [节奏模式] {pace_mode}
 [当前轮次] 第{state.conductor.turn_count}轮{tone_info}{defense_info}

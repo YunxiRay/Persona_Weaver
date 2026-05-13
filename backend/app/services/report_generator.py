@@ -76,22 +76,13 @@ class ReportGenerator:
         dims = engine.dimension_scores()
         return CognitiveMap(
             work=DimensionScores(
-                E_I=dims["E_I"] * 1.1,
-                S_N=dims["S_N"] * 1.0,
-                T_F=dims["T_F"] * 1.2,
-                J_P=dims["J_P"] * 1.1,
+                E_I=dims["E_I"], S_N=dims["S_N"], T_F=dims["T_F"], J_P=dims["J_P"],
             ),
             relationship=DimensionScores(
-                E_I=dims["E_I"] * 0.8,
-                S_N=dims["S_N"] * 0.9,
-                T_F=dims["T_F"] * 1.1,
-                J_P=dims["J_P"] * 0.7,
+                E_I=dims["E_I"], S_N=dims["S_N"], T_F=dims["T_F"], J_P=dims["J_P"],
             ),
             crisis=DimensionScores(
-                E_I=-dims["E_I"] * 0.5,
-                S_N=dims["S_N"] * 0.8,
-                T_F=dims["T_F"] * 0.6,
-                J_P=-dims["J_P"] * 0.4,
+                E_I=dims["E_I"], S_N=dims["S_N"], T_F=dims["T_F"], J_P=dims["J_P"],
             ),
         )
 
