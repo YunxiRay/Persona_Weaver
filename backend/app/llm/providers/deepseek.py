@@ -6,8 +6,8 @@ from app.llm.provider import BaseLLMProvider, LLMResponse, ProviderConfig, Token
 
 
 class DeepSeekProvider(BaseLLMProvider):
-    DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
-    DEFAULT_MODEL = "deepseek-chat"
+    DEFAULT_BASE_URL = "https://api.deepseek.com"
+    DEFAULT_MODEL = "deepseek-v4-flash"
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)

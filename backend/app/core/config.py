@@ -14,22 +14,15 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # ── 数据库 ──
-    DATABASE_URL: str = "postgresql+asyncpg://persona:persona_dev@localhost:5432/persona_weaver"
-    DATABASE_URL_SYNC: str = "postgresql://persona:persona_dev@localhost:5432/persona_weaver"
-
-    # ── Redis ──
-    REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./persona_weaver.db"
 
     # ── LLM ──
     DEV_LLM_PROVIDER: str = "deepseek"
     DEV_LLM_API_KEY: str = ""
-    DEV_LLM_BASE_URL: str = "https://api.deepseek.com/v1"
-    DEV_LLM_MODEL: str = "deepseek-chat"
+    DEV_LLM_BASE_URL: str = "https://api.deepseek.com"
+    DEV_LLM_MODEL: str = "deepseek-v4-flash"
     DEV_LLM_MAX_RETRIES: int = 3
     DEV_LLM_REQUEST_TIMEOUT: int = 30
-
-    # ── 嵌入模型 ──
-    EMBEDDING_MODEL_NAME: str = "BAAI/bge-large-zh-v1.5"
 
     # ── 推理引擎 ──
     INFERENCE_CONVERGENCE_THRESHOLD: float = 0.08
@@ -43,7 +36,7 @@ class Settings(BaseSettings):
     CRISIS_HELPLINE: str = "心理援助热线：12320（24小时）"
 
     # ── CORS ──
-    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["*"]
 
     # ── 日志 ──
     LOG_LEVEL: str = "DEBUG"
@@ -59,7 +52,7 @@ class Settings(BaseSettings):
                 return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

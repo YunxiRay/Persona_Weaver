@@ -1,11 +1,19 @@
 import { create } from "zustand";
 
+export interface PatternRef {
+  id: string;
+  name: string;
+  category: string;
+  score: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
   phase?: string;
+  patternReferences?: PatternRef[];
 }
 
 interface ChatState {
@@ -18,6 +26,9 @@ interface ChatState {
   defenseFlags: string[];
   isFinal: boolean;
   error: string | null;
+  errorHint: string | null;
+  turn: number;
+  currentPatternRefs: PatternRef[];
 
   addMessage: (msg: ChatMessage) => void;
   updateLastAssistant: (content: string) => void;
@@ -28,6 +39,9 @@ interface ChatState {
   setDefenseFlags: (flags: string[]) => void;
   setIsFinal: (final: boolean) => void;
   setError: (err: string | null) => void;
+  setErrorHint: (hint: string | null) => void;
+  setTurn: (turn: number) => void;
+  setCurrentPatternRefs: (refs: PatternRef[]) => void;
   reset: () => void;
 }
 
@@ -41,6 +55,9 @@ export const useChatStore = create<ChatState>((set) => ({
   defenseFlags: [],
   isFinal: false,
   error: null,
+  errorHint: null,
+  turn: 0,
+  currentPatternRefs: [],
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
   updateLastAssistant: (content) => set((s) => {
@@ -57,8 +74,12 @@ export const useChatStore = create<ChatState>((set) => ({
   setDefenseFlags: (flags) => set({ defenseFlags: flags }),
   setIsFinal: (final) => set({ isFinal: final }),
   setError: (err) => set({ error: err }),
+  setErrorHint: (hint) => set({ errorHint: hint }),
+  setTurn: (turn) => set({ turn }),
+  setCurrentPatternRefs: (refs) => set({ currentPatternRefs: refs }),
   reset: () => set({
     messages: [], sessionId: null, phase: "RAPPORT", phaseLabel: "正在建立连接...",
-    mbtiHint: "", defenseFlags: [], isFinal: false, error: null,
+    mbtiHint: "", defenseFlags: [], isFinal: false, error: null, errorHint: null, turn: 0,
+    currentPatternRefs: [],
   }),
 }));

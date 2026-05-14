@@ -49,16 +49,6 @@ class TestMessageModel:
         assert msg.role == "user"
         assert msg.content == "hello"
 
-    def test_message_with_embedding(self):
-        sid = uuid.uuid4()
-        embedding = [0.1] * 1024
-        msg = Message(
-            id=uuid.uuid4(), session_id=sid, role="user", content="test",
-            phase="EXPLORATION", embedding=embedding,
-        )
-        assert len(msg.embedding) == 1024
-
-
 class TestDimensionSnapshotModel:
     def test_create_snapshot_all_dimensions(self):
         sid = uuid.uuid4()

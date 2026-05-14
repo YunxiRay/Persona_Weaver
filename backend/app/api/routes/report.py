@@ -1,10 +1,12 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
 from app.engine.chat_pipeline import _reports
+from app.services.report_generator import ReportGenerator
 from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/report", tags=["report"])
@@ -46,3 +48,31 @@ async def get_report_by_id(report_id: str, db: AsyncSession = Depends(get_db)):
     if not report:
         raise HTTPException(status_code=404, detail="报告不存在")
     return {"report_id": str(report.id), "session_id": str(report.session_id), "mbti_type": report.mbti_type, "report": report.report_json, "created_at": report.created_at}
+
+
+@router.get("/session/{session_id}/export", response_class=HTMLResponse)
+async def export_report(session_id: str, db: AsyncSession = Depends(get_db)):
+    """导出报告为独立 HTML 文件"""
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的 session_id")
+
+    report_data = None
+    mem = _reports.get(session_id)
+    if mem:
+        report_data = mem
+    else:
+        svc = ReportService(db)
+        report = await svc.get_by_session(sid)
+        if report:
+            report_data = report.report_json
+
+    if not report_data:
+        raise HTTPException(status_code=404, detail="未找到该会话的报告")
+
+    generator = ReportGenerator()
+    html = generator.render_html(report_data)
+    return HTMLResponse(content=html, headers={
+        "Content-Disposition": f"attachment; filename=Persona_Weaver_Report_{session_id[:8]}.html"
+    })

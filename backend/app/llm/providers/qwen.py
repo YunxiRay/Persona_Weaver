@@ -7,7 +7,7 @@ from app.llm.provider import BaseLLMProvider, LLMResponse, ProviderConfig, Token
 
 class QwenProvider(BaseLLMProvider):
     DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DEFAULT_MODEL = "qwen-plus"
+    DEFAULT_MODEL = "qwen3.6-plus"
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)

@@ -7,7 +7,7 @@ from app.llm.provider import BaseLLMProvider, LLMResponse, ProviderConfig, Token
 
 class GLMProvider(BaseLLMProvider):
     DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
-    DEFAULT_MODEL = "glm-4"
+    DEFAULT_MODEL = "GLM-4.7"
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)

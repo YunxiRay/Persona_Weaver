@@ -25,8 +25,10 @@ class InternalAnalysis(BaseModel):
     updated_dimensions: UpdatedDimension
     updated_confidence: UpdatedConfidence
     safety_flags: SafetyFlags = Field(default_factory=SafetyFlags)
+    defense_flags: list[str] = Field(default_factory=list)  # avoidance, idealization, devaluation, splitting
     current_target: str = ""
     strategy: str = ""
+    pattern_references: list[str] = Field(default_factory=list)  # RAG 检索匹配到的模式名称
 
 
 class LLMStructuredOutput(BaseModel):

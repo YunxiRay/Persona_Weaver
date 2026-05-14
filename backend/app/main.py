@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes.config import router as config_router
 from app.api.routes.data import router as data_router
 from app.api.routes.debug import router as debug_router
+from app.api.routes.pattern import router as pattern_router
 from app.api.routes.report import router as report_router
 from app.api.routes.session import router as session_router
 from app.api.ws.chat import chat_websocket
@@ -54,6 +55,7 @@ async def ws_chat(ws: WebSocket):
 app.include_router(config_router, prefix=settings.API_PREFIX)
 app.include_router(data_router, prefix=settings.API_PREFIX)
 app.include_router(debug_router, prefix=settings.API_PREFIX)
+app.include_router(pattern_router, prefix=settings.API_PREFIX)
 app.include_router(session_router, prefix=settings.API_PREFIX)
 app.include_router(report_router, prefix=settings.API_PREFIX)
 
@@ -64,6 +66,104 @@ async def startup():
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # 1.5 初始化嵌入模型（后台线程下载，不阻塞服务启动）
+    import threading
+
+    def _load_embedder():
+        try:
+            embedder._ensure_model()
+            if not embedder.is_ready:
+                logger.warning("embedder_not_ready")
+                return
+            logger.info("embedder_loaded", model_path=str(embedder._model_path))
+
+            # 模型就绪后，补算缺失向量并重建索引
+            import asyncio
+
+            async def _reindex():
+                from app.core.database import get_session_factory
+                from app.services.pattern_service import PatternService, get_retriever
+                from app.models.psychology_pattern import PsychologyPattern
+                from sqlalchemy import select
+
+                factory = get_session_factory()
+                async with factory() as db:
+                    patterns = await db.execute(
+                        select(PsychologyPattern).where(
+                            PsychologyPattern.is_active == True,
+                            PsychologyPattern.vector_data == None,
+                        )
+                    )
+                    patterns = list(patterns.scalars().all())
+                    if patterns:
+                        for p in patterns:
+                            vec = embedder.encode_single(p.pattern_text)
+                            if vec is not None:
+                                p.vector_data = vec.tolist()
+                        await db.commit()
+                        logger.info("patterns_vectors_backfilled", count=len(patterns))
+
+                    retriever = get_retriever()
+                    await retriever.build_index(db)
+                    logger.info("retriever_index_ready", vector_count=len(retriever._patterns))
+
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(_reindex())
+            loop.close()
+        except Exception:
+            logger.warning("embedder_init_failed", exc_info=True)
+
+    try:
+        from app.llm.embedder import get_embedder
+
+        embedder = get_embedder()
+        threading.Thread(target=_load_embedder, daemon=True).start()
+    except Exception:
+        logger.warning("embedder_init_failed", exc_info=True)
+
+    # 1.6 自动播种模式库 + 构建检索索引
+    try:
+        from app.core.database import get_session_factory
+        from app.models.psychology_pattern import PsychologyPattern
+        from app.services.pattern_service import PatternService, get_retriever
+        from sqlalchemy import func, select
+        import json
+
+        factory = get_session_factory()
+        async with factory() as db:
+            result = await db.execute(select(func.count()).select_from(PsychologyPattern))
+            count = result.scalar()
+
+            if count == 0:
+                import os, sys
+
+                if getattr(sys, "frozen", False):
+                    seed_path = os.path.join(sys._MEIPASS, "seed_data", "patterns.json")
+                else:
+                    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed_data", "patterns.json")
+
+                if os.path.exists(seed_path):
+                    with open(seed_path, "r", encoding="utf-8") as f:
+                        patterns_data = json.load(f)
+
+                    svc = PatternService(db)
+                    imported = 0
+                    for p in patterns_data:
+                        vector_data = None
+                        if embedder.is_ready:
+                            vec = embedder.encode_single(p["pattern_text"])
+                            if vec is not None:
+                                vector_data = vec.tolist()
+                        await svc.create(**{**p, "vector_data": vector_data})
+                        imported += 1
+                    logger.info("patterns_auto_seeded", count=imported)
+
+            retriever = get_retriever()
+            await retriever.build_index(db)
+            logger.info("retriever_index_ready", vector_count=len(retriever._patterns))
+    except Exception:
+        logger.warning("pattern_init_failed", exc_info=True)
 
     # 1. Restore persisted config
     try:

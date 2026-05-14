@@ -12,6 +12,7 @@ from app.schemas.llm import (
     UpdatedConfidence,
     UpdatedDimension,
 )
+from app.schemas.pattern import PatternReference, PatternSearchRequest, PatternSearchResponse
 
 __all__ = [
     "CognitiveMap",
@@ -22,6 +23,9 @@ __all__ = [
     "LLMStructuredOutput",
     "LinguisticSketch",
     "PHASE_LABELS",
+    "PatternReference",
+    "PatternSearchRequest",
+    "PatternSearchResponse",
     "PersonalitySkeleton",
     "ReportSchema",
     "SBTILabel",

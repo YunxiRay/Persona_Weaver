@@ -1,0 +1,492 @@
+[
+  {
+    "name": "情感回避型防御",
+    "category": "防御机制",
+    "description": "个体在面对情绪冲突时，通过转移话题、沉默或理性化来回避直接情感表达。这类人群在对话中频繁切换话题，回避深入探讨个人感受。",
+    "pattern_text": "面对批评或情感冲突时转移话题保持沉默，用理性分析替代情感表达，回避深入探讨个人感受和内心体验",
+    "dimension_labels": {"T_F": "F", "E_I": "I"},
+    "mbti_tags": ["INFP", "ISFP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "理智化防御",
+    "category": "防御机制",
+    "description": "用抽象理论和逻辑分析来处理情感问题，将情绪体验转换为思维讨论，避免直接感受。常见于学术型或高度理性化的人格。",
+    "pattern_text": "用抽象概念和理论分析处理情绪问题，将个人体验转化为理性讨论，避免直接感受痛苦或不安，习惯用'从理论上说'来拉开距离",
+    "dimension_labels": {"T_F": "T", "S_N": "N"},
+    "mbti_tags": ["INTJ", "INTP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "理想化防御",
+    "category": "防御机制",
+    "description": "过度美化某人、某段关系或某种信念，以此来对抗内心的失望与不安全感。在对话中对重要他人使用极端正面词汇。",
+    "pattern_text": "过度美化重要他人或过去经历，使用极端正面形容词描述关系，回避承认其中的矛盾和问题，以此维护内心的安全感",
+    "dimension_labels": {"T_F": "F", "J_P": "J"},
+    "mbti_tags": ["ENFJ", "ESFJ"],
+    "defense_tags": ["idealization"],
+    "phase_tags": ["EXPLORATION", "RAPPORT"]
+  },
+  {
+    "name": "贬低防御",
+    "category": "防御机制",
+    "description": "通过贬低他人或外界来维护自我价值感。在对话中频繁使用负面评价词汇，将责任和问题外化。",
+    "pattern_text": "频繁贬低他人或外界环境，用负面评价词汇维护自我价值，将问题和矛盾归咎于外部因素，对自身弱点避而不谈",
+    "dimension_labels": {"T_F": "T", "E_I": "E"},
+    "mbti_tags": ["ENTJ", "ESTJ"],
+    "defense_tags": ["devaluation"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "分裂型防御",
+    "category": "防御机制",
+    "description": "以非黑即白的方式看待人和事物，无法同时容纳正面和负面评价。在对话中呈现极端化的情感表达。",
+    "pattern_text": "将人和事物分为绝对好或绝对坏两类，无法同时看到优点和缺点，情感表达极端化，在赞扬和贬低之间剧烈摇摆",
+    "dimension_labels": {"T_F": "F", "J_P": "J"},
+    "mbti_tags": ["INFJ", "ENFJ"],
+    "defense_tags": ["splitting"],
+    "phase_tags": ["CONFRONTATION"]
+  },
+  {
+    "name": "投射防御",
+    "category": "防御机制",
+    "description": "将自己无法接受的情感或冲动归因于他人。在对话中频繁猜测他人的动机和感受，并坚持自己的解读。",
+    "pattern_text": "将自己不愿承认的情绪或动机归因于他人，频繁猜测他人的内心想法并坚信不疑，对他人的评价往往反映自身未解决的问题",
+    "dimension_labels": {"S_N": "N", "T_F": "F"},
+    "mbti_tags": ["INFJ", "ENFP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "否认防御",
+    "category": "防御机制",
+    "description": "拒绝承认现实中令自己痛苦的事实，在对话中使用'不是这样的''我没有'等直接否定语。",
+    "pattern_text": "直接拒绝承认令人痛苦的事实或情绪，频繁使用否定句式回避真实感受，对明显存在的问题视而不见，坚持'一切都好'",
+    "dimension_labels": {"S_N": "S", "T_F": "F"},
+    "mbti_tags": ["ESFJ", "ISFJ"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["CONFRONTATION"]
+  },
+  {
+    "name": "反向形成防御",
+    "category": "防御机制",
+    "description": "用与真实情感相反的言行来表达，如过度关心实为敌意，过度独立实为渴望依赖。",
+    "pattern_text": "以与真实感受相反的方式言行，表面过度友善可能掩盖敌意，表面过度独立可能隐藏对依赖的渴望，行为与真实情感之间明显矛盾",
+    "dimension_labels": {"T_F": "F", "J_P": "J"},
+    "mbti_tags": ["ISFJ", "INFJ"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["CONFRONTATION", "SYNTHESIS"]
+  },
+  {
+    "name": "退行防御",
+    "category": "防御机制",
+    "description": "面对压力时退回到早期发展阶段的行为模式，表现为依赖、撒娇、逃避责任等幼稚化表现。",
+    "pattern_text": "在面对压力或挑战时表现出依赖和幼稚化行为，回避承担责任，希望他人帮忙做决定，用撒娇或装傻来应对困境",
+    "dimension_labels": {"T_F": "F", "J_P": "P"},
+    "mbti_tags": ["ESFP", "ISFP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "升华防御",
+    "category": "防御机制",
+    "description": "将不被接受的本能冲动转化为社会认可的行为，如将攻击性转化为体育竞技，将痛苦转化为艺术创作。这是健康的防御方式。",
+    "pattern_text": "将负面情绪或冲动转化为建设性活动，如用写作表达痛苦、用运动释放愤怒、用工作替代焦虑，以积极方式转化心理能量",
+    "dimension_labels": {"T_F": "T", "J_P": "J"},
+    "mbti_tags": ["INTJ", "ISTJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "SYNTHESIS"]
+  },
+  {
+    "name": "压抑防御",
+    "category": "防御机制",
+    "description": "将痛苦的记忆或情绪推到潜意识中，表现为'想不起来了''没有什么特别的'等回避性表述。",
+    "pattern_text": "将痛苦记忆或情绪推入潜意识，难以回忆童年细节或重要情感事件，对'过去的事'轻描淡写，常用'忘记了''想不起来了'回避深入",
+    "dimension_labels": {"S_N": "S", "J_P": "J"},
+    "mbti_tags": ["ISTJ", "ESTJ"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "转移防御",
+    "category": "防御机制",
+    "description": "将对某个对象的情绪（特别是愤怒）转移到另一个较安全的目标上，如对老板的不满发泄到家人身上。",
+    "pattern_text": "将对某一对象的情绪转移到较安全的目标上，在工作受挫后对家人发脾气，或将对某人的愤怒转移到对事物的抱怨上",
+    "dimension_labels": {"T_F": "F", "E_I": "E"},
+    "mbti_tags": ["ESFP", "ESTP"],
+    "defense_tags": ["devaluation"],
+    "phase_tags": ["EXPLORATION"]
+  },
+  {
+    "name": "灾难化思维",
+    "category": "认知偏差",
+    "description": "倾向于预期最坏的结果，将小问题放大为大灾难。对话中频繁使用'万一''肯定会''一定会失败'等灾难性预期表述。",
+    "pattern_text": "总是预期最坏情况发生，将小问题放大为灾难，对话中频繁使用绝对化的灾难预期语言，对不确定性极度焦虑",
+    "dimension_labels": {"S_N": "N", "T_F": "F"},
+    "mbti_tags": ["INFJ", "INFP"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "二分思维",
+    "category": "认知偏差",
+    "description": "以非黑即白的方式看待世界，无法接受灰色地带。语言中频繁使用'永远''从不''完全''绝对'等绝对化表述。",
+    "pattern_text": "将复杂问题简化为非此即彼的对立选择，语言中大量使用永远从不完全绝对等极端词汇，难以接受中间状态和多元可能性",
+    "dimension_labels": {"J_P": "J", "S_N": "S"},
+    "mbti_tags": ["ESTJ", "ISTJ"],
+    "defense_tags": ["splitting"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "过度泛化",
+    "category": "认知偏差",
+    "description": "从单一事件中得出普遍性结论。'一次失败等于永远失败''一个人背叛等于所有人不可信'。",
+    "pattern_text": "从单一负面事件中推导出普遍性结论，用一次经历定义整个类别，将所有类似情境都用同一负面框架解读",
+    "dimension_labels": {"S_N": "S", "J_P": "J"},
+    "mbti_tags": ["ISTJ", "ISFJ"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION"]
+  },
+  {
+    "name": "个人化偏差",
+    "category": "认知偏差",
+    "description": "过度将外部事件与自己联系起来，认为他人的行为都和自己有关，承担本不属于自己的责任。",
+    "pattern_text": "将外部事件过度与自身关联，认为他人的情绪和行为都与自己有关，为不应自己负责的事情感到内疚和自责",
+    "dimension_labels": {"T_F": "F", "E_I": "I"},
+    "mbti_tags": ["INFP", "ISFJ"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION"]
+  },
+  {
+    "name": "读心术偏差",
+    "category": "认知偏差",
+    "description": "假定自己知道他人的想法和感受，而不去核实。'他肯定觉得我很无聊''她一定看不起我'。",
+    "pattern_text": "主观断定他人的想法和感受而不去核实，以自己猜测的他人态度作为行为依据，对他人负面评价的预设深信不疑",
+    "dimension_labels": {"S_N": "N", "T_F": "F"},
+    "mbti_tags": ["INFJ", "ENFJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "情绪推理偏差",
+    "category": "认知偏差",
+    "description": "以情绪状态作为判断事实的依据。'我感到焦虑，所以一定有危险''我觉得内疚，所以一定做错了什么'。",
+    "pattern_text": "以当前情绪状态作为判断事实的依据，将主观感受等同于客观现实，情绪低落时认为一切都糟糕，情绪决定认知判断",
+    "dimension_labels": {"T_F": "F", "S_N": "N"},
+    "mbti_tags": ["INFP", "ENFP"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "标签化偏差",
+    "category": "认知偏差",
+    "description": "用简单的标签来定义自己或他人，而非描述具体行为。'我是个失败者''他是个坏人'。",
+    "pattern_text": "用简单标签定义自己和他人而非描述具体行为，将复杂的人格和行为简化为单一评价词汇，自我认同建立在片面标签上",
+    "dimension_labels": {"J_P": "J", "S_N": "S"},
+    "mbti_tags": ["ESTJ", "ESFJ"],
+    "defense_tags": ["splitting"],
+    "phase_tags": ["EXPLORATION"]
+  },
+  {
+    "name": "选择性注意偏差",
+    "category": "认知偏差",
+    "description": "只关注支持自己已有信念的信息，忽视相反证据。对话中反复强调符合自己观点的细节，忽略其他信息。",
+    "pattern_text": "只注意支持已有信念的信息而忽略矛盾证据，选择性强化符合预期的细节，对相反信息视而不见或轻描淡写",
+    "dimension_labels": {"J_P": "J", "E_I": "E"},
+    "mbti_tags": ["ENTJ", "ESTJ"],
+    "defense_tags": [],
+    "phase_tags": ["CONFRONTATION"]
+  },
+  {
+    "name": "冒名顶替综合征",
+    "category": "认知偏差",
+    "description": "尽管有客观成就，仍持续感觉自己不够格，将自己的成功归因于运气和外部因素，害怕被'揭穿'。",
+    "pattern_text": "将成功归因于运气和外界因素而否认自身能力，持续害怕被发现不够资格，尽管客观成就不错仍深感不安，低估自身价值",
+    "dimension_labels": {"T_F": "F", "E_I": "I"},
+    "mbti_tags": ["INFJ", "INTJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "述情障碍",
+    "category": "情感模式",
+    "description": "难以识别和描述自身情绪，倾向于将情绪体验转化为身体感受描述。在对话中对'你感觉怎么样'类问题回答困难。",
+    "pattern_text": "难以识别和用语言描述自身情绪体验，将情绪转化为身体感受描述如头痛胸闷，对感受类问题回应简短模糊或讲外部事实",
+    "dimension_labels": {"T_F": "T", "S_N": "S"},
+    "mbti_tags": ["ISTJ", "ISTP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "情绪淹没",
+    "category": "情感模式",
+    "description": "被强烈情绪淹没而失去自我调节能力，对话中出现情绪激动的长篇倾诉后突然沉默或崩溃。",
+    "pattern_text": "被强烈情绪淹没失去自我调节能力，情绪波动剧烈且难以自主平复，在强烈表达和完全沉默之间急剧转换，需要外部帮助调控",
+    "dimension_labels": {"T_F": "F", "J_P": "P"},
+    "mbti_tags": ["ENFP", "ESFP"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "情绪麻木",
+    "category": "情感模式",
+    "description": "长期压抑情感后出现的情绪体验能力减弱，对话中表现为情感语调平淡，对重大事件的感受描述贫乏。",
+    "pattern_text": "情感体验能力减弱表现为语调平淡，对重大事件缺乏应有的情绪反应，用'还好''没什么感觉'回应深入的情感探索",
+    "dimension_labels": {"T_F": "T", "E_I": "I"},
+    "mbti_tags": ["ISTP", "INTP"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "焦虑螺旋",
+    "category": "情感模式",
+    "description": "一个焦虑念头引发连锁负面思维，不断升级直至失控。对话中出现大量的重复性担忧表达和'如果...怎么办'句式。",
+    "pattern_text": "一个焦虑想法引发不断升级的连锁负面思维，频繁使用如果怎么办句式，担忧像滚雪球一样扩张无法停止，过度思考导致行动瘫痪",
+    "dimension_labels": {"S_N": "N", "J_P": "J"},
+    "mbti_tags": ["INFJ", "INTJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT"]
+  },
+  {
+    "name": "愤怒转移",
+    "category": "情感模式",
+    "description": "将深处的无力感和脆弱转化为愤怒向外释放，对话中频繁出现对他人的指责和不满，但深层实为自我失望。",
+    "pattern_text": "将无力感和脆弱转化为向外释放的愤怒，频繁指责他人和社会不公，但表层愤怒掩盖深层自我失望和未被满足的脆弱需求",
+    "dimension_labels": {"T_F": "T", "E_I": "E"},
+    "mbti_tags": ["ENTJ", "ESTP"],
+    "defense_tags": ["devaluation"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "羞耻退缩",
+    "category": "情感模式",
+    "description": "因深层羞耻感而回避社交和表达，在对话中对自身缺点话题高度防御，出现沉默、避眼、转题等退缩行为。",
+    "pattern_text": "因深层羞耻感回避社交和自我表达，对涉及自身缺点的话题高度敏感，面对探索性问题退缩沉默避眼转题，害怕被评价和拒绝",
+    "dimension_labels": {"T_F": "F", "E_I": "I"},
+    "mbti_tags": ["ISFJ", "INFP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "内疚驱动过度补偿",
+    "category": "情感模式",
+    "description": "被内疚感驱动而过度付出和负责，对话中频繁提到'应该''必须'等义务性词汇，对他人的需求过度敏感。",
+    "pattern_text": "被内疚感驱动过度付出，频繁使用应该必须等义务性词汇，对他人的需求和情绪过度敏感，难以拒绝他人的请求和期望",
+    "dimension_labels": {"T_F": "F", "J_P": "J"},
+    "mbti_tags": ["ESFJ", "ENFJ"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION"]
+  },
+  {
+    "name": "遗弃恐惧",
+    "category": "情感模式",
+    "description": "深度害怕被重要他人抛弃，对话中表现出对人际关系的高度警觉和不安，频繁试探关系安全度。",
+    "pattern_text": "深度恐惧被重要他人抛弃，对人际关系高度警觉不安，频繁试探对方是否还在意自己，对分离和冷落的信号过度敏感",
+    "dimension_labels": {"T_F": "F", "J_P": "P"},
+    "mbti_tags": ["ENFP", "ESFP"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "情感依赖",
+    "category": "情感模式",
+    "description": "过度依赖他人的认可和关注来维持自我价值感，对话中频繁提及他人看法，难以在独处时保持稳定情绪。",
+    "pattern_text": "过度依赖他人认可维持自我价值，频繁关注和提及他人对自己的看法，难以独处和自主决策，情绪稳定依赖于外部反馈",
+    "dimension_labels": {"T_F": "F", "E_I": "E"},
+    "mbti_tags": ["ESFJ", "ENFJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "共生依赖",
+    "category": "人际关系",
+    "description": "在关系中失去自我边界，将对方的需求视为自己的需求，对话中频繁说'我们'而非'我'，难以区分自己的感受和他人感受。",
+    "pattern_text": "在关系中失去自我边界，将他人的需求内化为自己的需求，频繁用我们来表述个人体验，难以区分自己和他人的感受与想法",
+    "dimension_labels": {"T_F": "F", "E_I": "E"},
+    "mbti_tags": ["ENFJ", "ESFJ"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "焦虑型依恋",
+    "category": "人际关系",
+    "description": "在亲密关系中过度寻求亲近和确认，对话中频繁表达对关系的不安全感，需要持续的确认和保证。",
+    "pattern_text": "在亲密关系中过度寻求亲近和持续确认，对伴侣的关注度和回应速度高度敏感，用粘人和频繁联系来缓解关系焦虑",
+    "dimension_labels": {"T_F": "F", "J_P": "P"},
+    "mbti_tags": ["ENFP", "ESFP"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "回避型依恋",
+    "category": "人际关系",
+    "description": "亲密关系中保持情感距离，对话中对关系话题退缩，强调独立和自给自足，贬低依赖需求。",
+    "pattern_text": "在亲密关系中刻意保持情感距离，强调独立自足和不需要他人，对亲密话题退缩，贬低情感依赖的合理性，害怕被控制或束缚",
+    "dimension_labels": {"T_F": "T", "E_I": "I"},
+    "mbti_tags": ["ISTP", "INTP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "讨好型人际模式",
+    "category": "人际关系",
+    "description": "通过取悦他人来获取安全感和认可，对话中表现出过度顺应，难以表达反对意见和自身需求。",
+    "pattern_text": "通过不断取悦他人来获取安全感和认可，过度顺应他人的期望和需求，难以表达反对意见，把自己的需求放在最后甚至忽略",
+    "dimension_labels": {"T_F": "F", "E_I": "E"},
+    "mbti_tags": ["ESFJ", "ISFJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "冲突回避型人际模式",
+    "category": "人际关系",
+    "description": "为避免冲突而压抑真实感受和需求，对话中对分歧性话题使用模棱两可的语言，不敢直接说'不'。",
+    "pattern_text": "为避免人际冲突而压抑真实感受和意见，遇到分歧时使用模棱两可的语言含糊其辞，不敢直接拒绝或表达反对，表面上和谐实为委屈",
+    "dimension_labels": {"T_F": "F", "J_P": "J"},
+    "mbti_tags": ["ISFJ", "INFJ"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "被动攻击模式",
+    "category": "人际关系",
+    "description": "间接表达愤怒和不满，如故意拖延、假装忘记、冷暴力等，对话中表面顺从但隐含对抗。",
+    "pattern_text": "间接表达不满和愤怒而不直接沟通，通过拖延沉默冷暴力等方式表达对抗，表面顺从配合但行为上不配合或暗中抵制",
+    "dimension_labels": {"T_F": "F", "J_P": "P"},
+    "mbti_tags": ["ISFP", "INFP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["CONFRONTATION"]
+  },
+  {
+    "name": "边界模糊",
+    "category": "人际关系",
+    "description": "难以建立和维护个人边界，对话中对人际困扰表现为过度卷入或完全隔离两种极端。",
+    "pattern_text": "难以建立健康的个人边界，要么过度干涉他人要么完全隔离自己，在过度卷入和完全退缩之间摇摆，缺乏灵活适度的界限感",
+    "dimension_labels": {"T_F": "F", "J_P": "P"},
+    "mbti_tags": ["ENFP", "ESFP"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION"]
+  },
+  {
+    "name": "社交面具行为",
+    "category": "人际关系",
+    "description": "在不同的社交场合展现出截然不同的自我，导致内在疲惫和身份困惑。对话中可能体现出对'真实的我是谁'的迷茫。",
+    "pattern_text": "在不同社交场合切换截然不同的行为模式，戴着面具社交导致内在疲惫，私下里质疑到底哪个才是真实的自己，长期伪装消耗大量心理能量",
+    "dimension_labels": {"T_F": "F", "E_I": "E"},
+    "mbti_tags": ["ENFJ", "ENTP"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "完美主义倾向",
+    "category": "人格特质",
+    "description": "对自我和他人设定不切实际的高标准，对话中频繁出现'还不够好''可以做得更好'等不满足表述。害怕犯错和失败。",
+    "pattern_text": "对自己和他人设定过高标准，频繁表达不满足和需要改进，对错误和失败有强烈的不安和自责，将自我价值与成就紧密绑定",
+    "dimension_labels": {"J_P": "J", "S_N": "S"},
+    "mbti_tags": ["ISTJ", "INTJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "感觉寻求型人格",
+    "category": "人格特质",
+    "description": "追求新奇刺激和多样化体验，对话中表现出对常规生活的厌倦和对冒险的渴望，难以接受重复和单调。",
+    "pattern_text": "强烈追求新奇体验和感官刺激，对常规和重复感到厌倦和压抑，渴望冒险和变化，难以长期坚持单调但有价值的任务",
+    "dimension_labels": {"S_N": "N", "J_P": "P"},
+    "mbti_tags": ["ESTP", "ENTP"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT"]
+  },
+  {
+    "name": "僵化与秩序依赖",
+    "category": "人格特质",
+    "description": "对规则和秩序有强烈需求，对话中对不确定性和变化表现出明显的焦虑，对计划被打乱的过度反应。",
+    "pattern_text": "对规则秩序和计划有强烈需求，不确定和变化引发显著焦虑，计划被打乱时出现过度反应，需要可预测性和掌控感来维持安全感",
+    "dimension_labels": {"J_P": "J", "S_N": "S"},
+    "mbti_tags": ["ISTJ", "ESTJ"],
+    "defense_tags": [],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "内向直觉型沉思",
+    "category": "人格特质",
+    "description": "大量时间沉浸在内心世界的意义构建中，对话中频繁出现抽象概念和象征性表达，对外部现实细节关注较少。",
+    "pattern_text": "花费大量时间沉浸内心世界构建意义和模式，偏好抽象概念和象征性表达，对外部现实细节和当下发生的事关注度较低",
+    "dimension_labels": {"E_I": "I", "S_N": "N"},
+    "mbti_tags": ["INFJ", "INTJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "外向感觉型体验",
+    "category": "人格特质",
+    "description": "高度投入当下具体的感官体验和实践操作，对话中多用具体事例和细节描述，偏好行动胜过思考。",
+    "pattern_text": "高度关注当下具体的感官体验和实际操作，对话中大量使用具体事例和细节描述，偏好行动和体验胜过抽象思考和理论探讨",
+    "dimension_labels": {"E_I": "E", "S_N": "S"},
+    "mbti_tags": ["ESTP", "ESFP"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT"]
+  },
+  {
+    "name": "经验开放型探索",
+    "category": "人格特质",
+    "description": "对各类新思想、新体验持高度开放态度，对话中展现出广泛的好奇心和认知弹性，乐于尝试不同视角。",
+    "pattern_text": "对各种新思想新体验持开放态度，展现出广泛的好奇心和认知灵活性，乐于从不同视角探索问题，享受思维的多样性和可能性",
+    "dimension_labels": {"S_N": "N", "J_P": "P"},
+    "mbti_tags": ["ENFP", "ENTP"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "问题聚焦应对",
+    "category": "应对策略",
+    "description": "面对压力时优先采取行动解决问题而非处理情绪，对话中对'你感觉怎么样'回避，直接转向'该怎么办'。",
+    "pattern_text": "优先聚焦于解决问题和制定行动计划而非处理情绪体验，回避情感探索类问题直接转向寻找解决方案，用行动力替代情感连接",
+    "dimension_labels": {"T_F": "T", "J_P": "J"},
+    "mbti_tags": ["ENTJ", "ESTJ"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  },
+  {
+    "name": "情感聚焦应对",
+    "category": "应对策略",
+    "description": "面对压力时优先寻求情感支持和情绪宣泄，对话中表现出强烈的倾诉需求，通过表达来缓解痛苦。",
+    "pattern_text": "优先通过情感表达和寻求他人支持来应对压力，有强烈的倾诉和分享需求，通过被理解和被倾听来缓解痛苦，处理情绪后才有力量解决问题",
+    "dimension_labels": {"T_F": "F", "E_I": "E"},
+    "mbti_tags": ["ENFJ", "ESFJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "EXPLORATION"]
+  },
+  {
+    "name": "意义建构应对",
+    "category": "应对策略",
+    "description": "通过为困境赋予意义来获得心理力量，对话中频繁寻找'为什么会发生''这件事教会我什么'等意义解释。",
+    "pattern_text": "通过为困难和痛苦赋予深层意义来获得心理力量，频繁追问为什么会发生以及从中能学到什么，需要在混乱中找到叙事连贯性和目的感",
+    "dimension_labels": {"S_N": "N", "T_F": "F"},
+    "mbti_tags": ["INFJ", "INFP"],
+    "defense_tags": [],
+    "phase_tags": ["SYNTHESIS"]
+  },
+  {
+    "name": "社会支持寻求",
+    "category": "应对策略",
+    "description": "主动向他人寻求实际帮助和资源链接，对话中表现出开放求助的态度，将社会网络视为可使用的资源。",
+    "pattern_text": "主动向他人和社会网络寻求实际帮助和信息资源，能够开放地表达需求并接受支持，将人际关系视为应对压力的有效工具",
+    "dimension_labels": {"E_I": "E", "T_F": "F"},
+    "mbti_tags": ["ESFJ", "ENFJ"],
+    "defense_tags": [],
+    "phase_tags": ["RAPPORT", "SYNTHESIS"]
+  },
+  {
+    "name": "自强型防御",
+    "category": "应对策略",
+    "description": "坚信只能依靠自己，拒绝他人帮助，对话中反复强调'我必须自己解决''不想麻烦别人'，将求助视为软弱。",
+    "pattern_text": "拒绝他人帮助坚持独自承担一切，反复强调自己解决不想麻烦别人，将接受帮助等同于软弱和无能，独自承受压力和困难",
+    "dimension_labels": {"T_F": "T", "E_I": "I"},
+    "mbti_tags": ["INTJ", "ISTP"],
+    "defense_tags": ["avoidance"],
+    "phase_tags": ["EXPLORATION", "CONFRONTATION"]
+  }
+]

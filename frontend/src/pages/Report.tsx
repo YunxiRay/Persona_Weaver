@@ -6,6 +6,7 @@ import { CognitiveMap } from "@/components/report/CognitiveMap";
 import { WordCloud } from "@/components/report/WordCloud";
 import { TherapistNote } from "@/components/report/TherapistNote";
 import { api } from "@/lib/api";
+import type { PatternRef } from "@/stores/chatStore";
 
 interface ReportData {
   personality_skeleton: {
@@ -29,6 +30,7 @@ interface ReportData {
     soul_match_index: string;
   };
   therapist_note: string;
+  referenced_patterns?: PatternRef[];
 }
 
 export default function Report() {
@@ -173,6 +175,26 @@ export default function Report() {
             soulMatch={sbti.soul_match_index}
           />
         </div>
+
+        {/* Referenced Patterns */}
+        {report.referenced_patterns && report.referenced_patterns.length > 0 && (
+          <div className="stagger-item rounded-2xl border border-sage-200 bg-white p-5" style={{ animationDelay: "0.45s" }}>
+            <h3 className="mb-1 text-lg font-semibold text-sage-700">参考心理学模式</h3>
+            <p className="mb-3 text-xs text-sage-400">
+              以下心理学模式在对话分析中被检索并引用，为本次人格分析提供专业知识参照。
+            </p>
+            <div className="space-y-2">
+              {report.referenced_patterns.map((p) => (
+                <div key={p.id} className="rounded-lg bg-sage-50 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-sage-700">{p.name}</span>
+                    <span className="rounded-full bg-sage-200 px-2 py-0.5 text-xs text-sage-600">{p.category}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Disclaimer */}
         <div className="stagger-item rounded-2xl border border-sage-200 bg-white p-4 text-center text-xs text-sage-400" style={{ animationDelay: "0.5s" }}>

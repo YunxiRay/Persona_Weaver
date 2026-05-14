@@ -4,7 +4,7 @@ import { ChatBubble } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { PhaseIndicator } from "@/components/chat/PhaseIndicator";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, type PatternRef } from "@/stores/chatStore";
 import { useConfigStore } from "@/stores/configStore";
 
 export default function Chat() {
@@ -47,12 +47,14 @@ export default function Chat() {
 
     const unsub4 = on("reply", (d) => {
       const msgId = `ai_${d.turn}_${Date.now()}`;
+      const patternRefs = (d.pattern_references as PatternRef[]) || [];
       store.addMessage({
         id: msgId,
         role: "assistant",
         content: d.content as string,
         timestamp: Date.now(),
         phase: d.phase as string,
+        patternReferences: patternRefs.length > 0 ? patternRefs : undefined,
       });
       setTypingMessageId(msgId);
       if (d.session_id) store.setSessionId(d.session_id as string);
@@ -61,6 +63,7 @@ export default function Chat() {
       if (d.defense_flags) store.setDefenseFlags(d.defense_flags as string[]);
       if (d.turn !== undefined) store.setTurn(d.turn as number);
       if (d.error_hint) store.setErrorHint(d.error_hint as string);
+      if (patternRefs.length > 0) store.setCurrentPatternRefs(patternRefs);
       if (d.is_final) {
         store.setIsFinal(true);
         if (d.report && d.session_id) {
@@ -173,6 +176,7 @@ export default function Chat() {
               content={m.content}
               timestamp={m.timestamp}
               typing={m.id === typingMessageId && m.role === "assistant"}
+              patternReferences={m.patternReferences}
             />
           ))}
           {store.errorHint && (

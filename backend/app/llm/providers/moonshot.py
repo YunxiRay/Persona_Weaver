@@ -7,7 +7,7 @@ from app.llm.provider import BaseLLMProvider, LLMResponse, ProviderConfig, Token
 
 class MoonshotProvider(BaseLLMProvider):
     DEFAULT_BASE_URL = "https://api.moonshot.cn/v1"
-    DEFAULT_MODEL = "moonshot-v1-8k"
+    DEFAULT_MODEL = "kimi-k2-turbo-preview"
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)

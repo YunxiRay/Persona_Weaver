@@ -142,6 +142,14 @@ async def run_pipeline(
             "turn": state.conductor.turn_count,
         }
 
+    # Step 2.5: RAG 模式检索
+    log.info("pipeline_step", step=2.5, name="rag_retrieval")
+    rag_context, pattern_refs = await _retrieve_patterns(
+        user_input,
+        phase=state.conductor.current_phase,
+        defense_flags=defense_result.get("flags", []),
+    )
+
     # Step 3: 阶段状态机判断
     log.info("pipeline_step", step=3, name="phase_evaluation")
     old_phase = state.conductor.current_phase
@@ -174,7 +182,7 @@ async def run_pipeline(
     word_count = len(user_input.replace(" ", ""))
     state.conductor.advance(word_count)
 
-    llm_result = await _get_llm_response(state, strategy, tone_analysis, defense_result)
+    llm_result = await _get_llm_response(state, strategy, tone_analysis, defense_result, rag_context)
     reply = llm_result["content"]
     finish_reason = llm_result.get("finish_reason", "stop")
 
@@ -264,6 +272,7 @@ async def run_pipeline(
         "defense_flags": defense_result["flags"],
         "report": report_data,
         "error_hint": llm_result.get("error_hint"),
+        "pattern_references": pattern_refs,
     }
 
 
@@ -276,10 +285,10 @@ def _get_or_create_session(session_id: str | None) -> SessionState:
     return state
 
 
-async def _get_llm_response(state: SessionState, strategy: str, tone: str | None, defense: dict) -> dict:
+async def _get_llm_response(state: SessionState, strategy: str, tone: str | None, defense: dict, rag_context: str | None = None) -> dict:
     """调用 LLM 获取回复，含重试和降级。返回 {"content": str, "error_hint": str|None, "finish_reason": str}"""
     phase = state.conductor.current_phase
-    system_prompt = _build_system_prompt(state, strategy, tone, defense)
+    system_prompt = _build_system_prompt(state, strategy, tone, defense, rag_context)
     messages = [{"role": "system", "content": system_prompt}]
     recent = state.history[-20:]
     messages.extend(recent)
@@ -338,7 +347,7 @@ def generate_opening() -> str:
     )
 
 
-def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, defense: dict) -> str:
+def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, defense: dict, rag_context: str | None = None) -> str:
     phase = state.conductor.current_phase
     dims = state.dimensions
     conf = state.confidence
@@ -348,6 +357,16 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
     defense_info = ""
     if defense["flags"]:
         defense_info = f"\n[防御特征] {', '.join(defense['flags'])}"
+
+    rag_section = ""
+    if rag_context:
+        rag_section = f"""
+[检索参考 — 心理学知识库匹配]
+以下心理学模式与用户当前表达高度相关，请参考这些专业知识框架进行分析。
+注意：这些模式仅供参考，你仍需基于用户的真实表达进行独立判断。
+
+{rag_context}
+"""
 
     return f"""[角色] 你是 Persona Weaver，一位荣格取向的资深心理分析师。你主导整个对话——主动引入话题、提出开放式问题、设计情境练习，像一个真正的心理咨询师那样掌控对话的节奏和方向。不要等待用户来推动对话。
 
@@ -360,7 +379,7 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
 - 用户试图转移话题时，先共情接纳，再巧妙拉回当前阶段的目标方向。
 - 用户敷衍或拒绝回答时，换一个角度或话题继续尝试。
 - 只有系统将阶段切换为 ENDED 时对话才结束——你无权自行结束对话。
-
+{rag_section}
 [独立评估规则 —— 严格遵守]
 - 每轮对话中，请基于当前轮用户的表达独立评估其人格维度，不要为了与前几轮的评估结果保持一致而忽略新出现的矛盾信息。
 - 用户在对话过程中可能逐渐放下防备或展现不同的人格面向。如果用户当前轮的表述与之前形成的人设不一致，优先采信当前轮的表述。
@@ -373,9 +392,10 @@ def _build_system_prompt(state: SessionState, strategy: str, tone: str | None, d
 
 [安全边界] 严禁提供医疗诊断。遇到危机词汇立即在 safety_flags 中告警。
 [输出格式] 严格输出 JSON 结构：
-{{"doctor_reply": "对用户可见的回复（必须包含引导性问题或新话题，控制在600字以内）", "internal_analysis": {{"session_phase": "{phase}", "updated_dimensions": {{"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}}, "updated_confidence": {{"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}}, "safety_flags": {{"risk_level": "LOW", "trigger_keywords": []}}, "defense_flags": [], "current_target": "", "strategy": ""}}, "next_action_hint": "下一个要引入的话题或问题方向", "is_final_report": false}}
+{{"doctor_reply": "对用户可见的回复（必须包含引导性问题或新话题，控制在600字以内）", "internal_analysis": {{"session_phase": "{phase}", "updated_dimensions": {{"E_I": 0.0, "S_N": 0.0, "T_F": 0.0, "J_P": 0.0}}, "updated_confidence": {{"E_I": 0.5, "S_N": 0.5, "T_F": 0.5, "J_P": 0.5}}, "safety_flags": {{"risk_level": "LOW", "trigger_keywords": []}}, "defense_flags": [], "current_target": "", "strategy": "", "pattern_references": []}}, "next_action_hint": "下一个要引入的话题或问题方向", "is_final_report": false}}
 
-[defense_flags 说明] 检测用户当前轮的防御特征，可选值: "avoidance"（回避问题）、"idealization"（过度美化）、"devaluation"（过度贬低）、"splitting"（分裂），无防御特征时返回空数组 []。"""
+[defense_flags 说明] 检测用户当前轮的防御特征，可选值: "avoidance"（回避问题）、"idealization"（过度美化）、"devaluation"（过度贬低）、"splitting"（分裂），无防御特征时返回空数组 []。
+[pattern_references 说明] 如果你在分析中参考了上述检索到的心理学模式，请在此列出你实际使用的模式名称；未使用则返回空数组 []。"""
 
 
 def _update_dimensions(state: SessionState, parsed: LLMStructuredOutput) -> None:
@@ -473,3 +493,38 @@ def _validate_inference(state: SessionState) -> None:
             logger.warning("inference_validation", warnings=result["warnings"])
     except Exception as e:
         logger.error("inference_validator_failed", error=str(e))
+
+
+async def _retrieve_patterns(user_text: str, phase: str, defense_flags: list[str]) -> tuple[str | None, list[dict]]:
+    """RAG 检索：编码用户输入 → 搜索模式库 → 返回格式化的上下文和引用列表"""
+    try:
+        from app.llm.embedder import get_embedder
+        from app.services.pattern_service import get_retriever
+
+        embedder = get_embedder()
+        retriever = get_retriever()
+
+        if not embedder.is_ready or not retriever.is_ready:
+            return None, []
+
+        query_vec = embedder.encode_single(user_text)
+        if query_vec is None:
+            return None, []
+
+        results = retriever.search(query_vec, top_k=3, phase=phase, defense_flags=defense_flags)
+        if not results:
+            return None, []
+
+        lines = []
+        for i, r in enumerate(results, 1):
+            lines.append(f"{i}. {r['name']} ({r['category']}, 匹配度 {r['score']:.2f}): {r['description']}")
+        rag_context = "\n".join(lines)
+
+        pattern_refs = [
+            {"id": r["pattern_id"], "name": r["name"], "category": r["category"], "score": round(r["score"], 3)}
+            for r in results
+        ]
+        return rag_context, pattern_refs
+    except Exception as e:
+        logger.error("rag_retrieval_failed", error=str(e))
+        return None, []

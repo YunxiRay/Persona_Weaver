@@ -1,4 +1,5 @@
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000/ws/chat";
+const WS_URL = import.meta.env.VITE_WS_URL
+  || `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws/chat`;
 
 type MessageHandler = (data: Record<string, unknown>) => void;
 

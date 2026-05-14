@@ -1,16 +1,18 @@
 import { useEffect, useState, useRef } from "react";
+import type { PatternRef } from "@/stores/chatStore";
 
 interface Props {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
   typing?: boolean;
+  patternReferences?: PatternRef[];
 }
 
 const TYPING_SPEED = 35; // ms per character base
 const TYPING_VARIANCE = 15; // random variance for natural feel
 
-export function ChatBubble({ role, content, timestamp, typing }: Props) {
+export function ChatBubble({ role, content, timestamp, typing, patternReferences }: Props) {
   const isUser = role === "user";
   const isSystem = role === "system";
   const [displayedText, setDisplayedText] = useState(typing ? "" : content);
@@ -64,6 +66,19 @@ export function ChatBubble({ role, content, timestamp, typing }: Props) {
       <p className={`whitespace-pre-wrap text-sm leading-relaxed ${isTyping ? "typing-cursor" : ""}`}>
         {displayedText}
       </p>
+      {!isTyping && patternReferences && patternReferences.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {patternReferences.map((ref) => (
+            <span
+              key={ref.id}
+              className="inline-flex items-center rounded-full bg-sage-100 px-2.5 py-0.5 text-xs text-sage-700"
+              title={`${ref.category} — 匹配度: ${(ref.score * 100).toFixed(0)}%`}
+            >
+              {ref.name}
+            </span>
+          ))}
+        </div>
+      )}
       {!isTyping && (
         <span className="mt-1 block text-right text-xs opacity-60">
           {new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
